@@ -17,16 +17,16 @@ type (
 
 	//Cursor struct
 	Cursor struct {
-		Fields   []Field
-		Limit    int
-		Backward bool
+		Fields   []Field `json:"fields"`
+		Limit    int     `json:"limit"`
+		Backward bool    `json:"backward"`
 	}
 
 	//Field struct
 	Field struct {
-		Name      string
-		Value     interface{}
-		Direction DirectionType
+		Name      string        `json:"name"`
+		Value     interface{}   `json:"value"`
+		Direction DirectionType `json:"direction"`
 	}
 )
 
@@ -72,18 +72,19 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 		if f.Value == nil {
 			continue
 		}
-		query := "("
+		//query := "("
+		query := ""
 		val := make([]interface{}, 0)
 		for j := 0; j <= i; j++ {
 			if j != i {
-				s := fmt.Sprintf("(%v %v ?)", c.Fields[j].Name, "=")
+				s := fmt.Sprintf("%v %v ?", c.Fields[j].Name, "=")
 				val = append(val, c.Fields[j].Value)
 				if j != 0 {
 					query += " AND "
 				}
 				query += s
 			} else {
-				s := fmt.Sprintf("(%v %v ?)", c.Fields[j].Name, CompareTerms[c.Fields[j].Direction])
+				s := fmt.Sprintf("%v %v ?", c.Fields[j].Name, CompareTerms[c.Fields[j].Direction])
 				val = append(val, c.Fields[j].Value)
 				if j != 0 {
 					query += " AND "
@@ -91,18 +92,19 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 				query += s
 			}
 		}
-		query += ")"
+		//query += ")"
 		log.Println("Additional query:", query)
 		q = q.Or(query, val...)
 	}
 	//-------
-	return q
+	return db.Where(q)
 }
 
 //order convertation
 func (c *Cursor) order(query *gorm.DB) *gorm.DB {
 	for _, f := range c.Fields {
 		order := fmt.Sprintf("%s %s", f.Name, f.Direction)
+		log.Println("order:", order)
 		query = query.Order(order)
 		if c.Limit != 0 {
 			query = query.Limit(c.Limit + 1)
@@ -110,6 +112,11 @@ func (c *Cursor) order(query *gorm.DB) *gorm.DB {
 	}
 
 	return query
+}
+
+//GroupConditions for GORM v2
+func (c *Cursor) GroupConditions(db *gorm.DB) *gorm.DB {
+	return c.order(c.where(db))
 }
 
 func columnName(field reflect.StructField) string {
