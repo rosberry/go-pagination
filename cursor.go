@@ -94,7 +94,11 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 		}
 		//query += ")"
 		log.Println("Additional query:", query)
-		q = q.Or(query, val...)
+		if len(c.Fields) != 1 {
+			q = q.Or(query, val...)
+		} else {
+			q = q.Where(query, val...)
+		}
 	}
 	//-------
 	return db.Where(q)

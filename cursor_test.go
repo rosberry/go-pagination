@@ -50,6 +50,22 @@ var (
 	queryCursorStringWhereWithGroupCondition = `SELECT * FROM "users" WHERE (id > $1 OR (id = $2 AND name < $3)) AND count < $4 ORDER BY id asc,name desc LIMIT 4`
 
 	defaultCursorEncodeBase64Str = `eyJmaWVsZHMiOlt7Im5hbWUiOiJpZCIsInZhbHVlIjpudWxsLCJkaXJlY3Rpb24iOiJhc2MifV0sImxpbWl0IjozLCJiYWNrd2FyZCI6ZmFsc2V9`
+
+	queryCursorOneField = &Cursor{
+		Fields: []Field{
+			Field{
+				Name:      "id",
+				Value:     15,
+				Direction: DirectionAsc,
+			},
+		},
+		Limit:    defaultLimit,
+		Backward: false,
+	}
+
+	queryCursorStringWhereForOneField                   = `SELECT * FROM "users" WHERE id > $1`
+	queryCursorStringWhereWithOrderForOneField          = `SELECT * FROM "users" WHERE id > $1 ORDER BY id asc LIMIT 4`
+	queryCursorStringWhereWithGroupConditionForOneField = `SELECT * FROM "users" WHERE id > $1 AND count < $2 ORDER BY id asc LIMIT 4`
 )
 
 func TestNew(t *testing.T) {
@@ -192,5 +208,105 @@ func TestScope(t *testing.T) {
 	log.Println(sql)
 	if queryCursorStringWhereWithGroupCondition != sql {
 		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereWithGroupCondition)
+	}
+}
+
+func TestWhereForOneFieldCursor(t *testing.T) {
+	sqlDB, _, _ := sqlmock.New()
+	db, _ := gorm.Open(postgres.New(postgres.Config{
+		Conn: sqlDB,
+	}), &gorm.Config{
+		PrepareStmt: true,
+	})
+	db = db.Session(&gorm.Session{DryRun: true})
+
+	type User struct {
+		ID   uint
+		Name string
+	}
+	var user User
+
+	dbAdditionalQuery := queryCursorOneField.where(db)
+	stmt := dbAdditionalQuery.Find(user).Statement
+	sql := stmt.SQL.String()
+
+	if queryCursorStringWhereForOneField != sql {
+		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereForOneField)
+	}
+}
+
+func TestOrderForOneFieldCursor(t *testing.T) {
+	sqlDB, _, _ := sqlmock.New()
+	db, _ := gorm.Open(postgres.New(postgres.Config{
+		Conn: sqlDB,
+	}), &gorm.Config{
+		PrepareStmt: true,
+	})
+	db = db.Session(&gorm.Session{DryRun: true})
+
+	type User struct {
+		ID   uint
+		Name string
+	}
+	var user User
+
+	dbAdditionalQuery := queryCursorOneField.order(queryCursorOneField.where(db))
+	stmt := dbAdditionalQuery.Find(user).Statement
+	sql := stmt.SQL.String()
+
+	if queryCursorStringWhereWithOrderForOneField != sql {
+		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereWithOrderForOneField)
+	}
+}
+
+func TestWhereWithGroupConditionsForOneFieldCursor(t *testing.T) {
+	sqlDB, _, _ := sqlmock.New()
+	db, _ := gorm.Open(postgres.New(postgres.Config{
+		Conn: sqlDB,
+	}), &gorm.Config{
+		PrepareStmt: true,
+	})
+	db = db.Session(&gorm.Session{DryRun: true})
+
+	type User struct {
+		ID    uint
+		Name  string
+		Count uint
+	}
+	var user User
+
+	dbAdditionalQuery := queryCursorOneField.GroupConditions(db)
+	//scope := queryCursor.Scope()
+	stmt := dbAdditionalQuery.Where(db.Where("count < ?", 20)).Find(user).Statement
+	sql := stmt.SQL.String()
+
+	log.Println(sql)
+	if queryCursorStringWhereWithGroupConditionForOneField != sql {
+		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereWithGroupConditionForOneField)
+	}
+}
+func TestScopeForOneFieldCursor(t *testing.T) {
+	sqlDB, _, _ := sqlmock.New()
+	db, _ := gorm.Open(postgres.New(postgres.Config{
+		Conn: sqlDB,
+	}), &gorm.Config{
+		PrepareStmt: true,
+	})
+	db = db.Session(&gorm.Session{DryRun: true})
+
+	type User struct {
+		ID    uint
+		Name  string
+		Count uint
+	}
+	var user User
+
+	scope := queryCursorOneField.Scope()
+	stmt := db.Scopes(scope).Where("count < ?", 20).Find(user).Statement
+	sql := stmt.SQL.String()
+
+	log.Println(sql)
+	if queryCursorStringWhereWithGroupConditionForOneField != sql {
+		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereWithGroupConditionForOneField)
 	}
 }
