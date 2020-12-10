@@ -44,8 +44,9 @@ var (
 		Limit:    defaultLimit,
 		Backward: false,
 	}
-	queryCursorStringWhere          = `SELECT * FROM "users" WHERE id > $1 OR (id = $2 AND name < $3)`
-	queryCursorStringWhereWithOrder = `SELECT * FROM "users" WHERE id > $1 OR (id = $2 AND name < $3) ORDER BY id asc,name desc LIMIT 4`
+
+	queryCursorStringWhere          = `SELECT * FROM "users" WHERE (id > $1 OR (id = $2 AND name < $3))`
+	queryCursorStringWhereWithOrder = `SELECT * FROM "users" WHERE (id > $1 OR (id = $2 AND name < $3)) ORDER BY id asc,name desc LIMIT 4`
 
 	queryCursorStringWhereWithGroupCondition = `SELECT * FROM "users" WHERE (id > $1 OR (id = $2 AND name < $3)) AND count < $4 ORDER BY id asc,name desc LIMIT 4`
 
@@ -66,6 +67,25 @@ var (
 	queryCursorStringWhereForOneField                   = `SELECT * FROM "users" WHERE id > $1`
 	queryCursorStringWhereWithOrderForOneField          = `SELECT * FROM "users" WHERE id > $1 ORDER BY id asc LIMIT 4`
 	queryCursorStringWhereWithGroupConditionForOneField = `SELECT * FROM "users" WHERE id > $1 AND count < $2 ORDER BY id asc LIMIT 4`
+
+	queryCursorBackward = &Cursor{
+		Fields: []Field{
+			Field{
+				Name:      "id",
+				Value:     15,
+				Direction: DirectionAsc,
+			},
+			Field{
+				Name:      "name",
+				Value:     "ivan",
+				Direction: DirectionDesc,
+			},
+		},
+		Limit:    defaultLimit,
+		Backward: true,
+	}
+	queryCursorBackwardStringWhere          = `SELECT * FROM "users" WHERE (id < $1 OR (id = $2 AND name > $3))`
+	queryCursorBackwardStringWhereWithOrder = `SELECT * FROM "users" WHERE (id < $1 OR (id = $2 AND name > $3)) ORDER BY id desc,name asc LIMIT 4`
 )
 
 func TestNew(t *testing.T) {
@@ -86,12 +106,12 @@ func TestAddField(t *testing.T) {
 }
 
 func TestBackward(t *testing.T) {
-	dd := DirectionAsc.Backward()
+	dd := DirectionAsc.Backward(true)
 	if dd != DirectionDesc {
 		t.Error("Failed DirectionAsc backward")
 	}
 
-	da := DirectionDesc.Backward()
+	da := DirectionDesc.Backward(true)
 	if da != DirectionAsc {
 		t.Error("Failed DirectionDesc backward")
 	}
@@ -132,6 +152,15 @@ func TestWhere(t *testing.T) {
 	if queryCursorStringWhere != sql {
 		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhere)
 	}
+
+	//Backward
+	dbAdditionalQuery = queryCursorBackward.where(db)
+	stmt = dbAdditionalQuery.Find(user).Statement
+	sql = stmt.SQL.String()
+
+	if queryCursorBackwardStringWhere != sql {
+		t.Errorf("[Backward=true] Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorBackwardStringWhere)
+	}
 }
 
 func TestOrder(t *testing.T) {
@@ -156,6 +185,15 @@ func TestOrder(t *testing.T) {
 	if queryCursorStringWhereWithOrder != sql {
 		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereWithOrder)
 	}
+
+	//Backward
+	dbAdditionalQuery = queryCursorBackward.order(queryCursorBackward.where(db))
+	stmt = dbAdditionalQuery.Find(user).Statement
+	sql = stmt.SQL.String()
+
+	if queryCursorBackwardStringWhereWithOrder != sql {
+		t.Errorf("[Backward=true] Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorBackwardStringWhereWithOrder)
+	}
 }
 
 func TestWhereWithGroupConditions(t *testing.T) {
@@ -179,7 +217,6 @@ func TestWhereWithGroupConditions(t *testing.T) {
 	stmt := dbAdditionalQuery.Where("count < ?", 20).Find(user).Statement
 	sql := stmt.SQL.String()
 
-	log.Println(sql)
 	if queryCursorStringWhereWithGroupCondition != sql {
 		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereWithGroupCondition)
 	}
@@ -205,7 +242,6 @@ func TestScope(t *testing.T) {
 	stmt := db.Scopes(scope).Where("count < ?", 20).Find(user).Statement
 	sql := stmt.SQL.String()
 
-	log.Println(sql)
 	if queryCursorStringWhereWithGroupCondition != sql {
 		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereWithGroupCondition)
 	}
@@ -280,7 +316,6 @@ func TestWhereWithGroupConditionsForOneFieldCursor(t *testing.T) {
 	stmt := dbAdditionalQuery.Where(db.Where("count < ?", 20)).Find(user).Statement
 	sql := stmt.SQL.String()
 
-	log.Println(sql)
 	if queryCursorStringWhereWithGroupConditionForOneField != sql {
 		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereWithGroupConditionForOneField)
 	}
@@ -305,8 +340,52 @@ func TestScopeForOneFieldCursor(t *testing.T) {
 	stmt := db.Scopes(scope).Where("count < ?", 20).Find(user).Statement
 	sql := stmt.SQL.String()
 
-	log.Println(sql)
 	if queryCursorStringWhereWithGroupConditionForOneField != sql {
 		t.Errorf("Query\n`%v`\nnot equal\n`%v`\n", sql, queryCursorStringWhereWithGroupConditionForOneField)
 	}
+}
+
+func TestResult(t *testing.T) {
+	type User struct {
+		ID    uint
+		Name  string
+		Count uint
+	}
+
+	var users []User = []User{
+		User{ID: 0, Name: "A", Count: 99},
+		User{ID: 1, Name: "B", Count: 90},
+		User{ID: 2, Name: "C", Count: 80},
+		User{ID: 3, Name: "C", Count: 70},
+		User{ID: 4, Name: "C", Count: 70},
+		User{ID: 5, Name: "C", Count: 70},
+		User{ID: 6, Name: "D", Count: 40},
+		User{ID: 7, Name: "E", Count: 30},
+		User{ID: 8, Name: "F", Count: 20},
+		User{ID: 9, Name: "G", Count: 10},
+	}
+
+	cursor := &Cursor{
+		Fields: []Field{
+			Field{
+				Name:      "name",
+				Value:     nil,
+				Direction: DirectionAsc,
+			},
+			Field{
+				Name:      "id",
+				Value:     nil,
+				Direction: DirectionAsc,
+			},
+		},
+		Limit:    4,
+		Backward: false,
+	}
+
+	response, usersResp := cursor.Result(users)
+
+	log.Printf("resp: %+v\n", response)
+	log.Printf("users: %+v\n", usersResp)
+
+	t.Error("fail")
 }

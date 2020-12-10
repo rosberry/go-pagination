@@ -84,7 +84,7 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 				}
 				query += s
 			} else {
-				s := fmt.Sprintf("%v %v ?", c.Fields[j].Name, CompareTerms[c.Fields[j].Direction])
+				s := fmt.Sprintf("%v %v ?", c.Fields[j].Name, CompareTerms[c.Fields[j].Direction.Backward(c.Backward)])
 				val = append(val, c.Fields[j].Value)
 				if j != 0 {
 					query += " AND "
@@ -93,7 +93,7 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 			}
 		}
 		//query += ")"
-		log.Println("Additional query:", query)
+		// log.Println("Additional query:", query)
 		if len(c.Fields) != 1 {
 			q = q.Or(query, val...)
 		} else {
@@ -107,8 +107,8 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 //order convertation
 func (c *Cursor) order(query *gorm.DB) *gorm.DB {
 	for _, f := range c.Fields {
-		order := fmt.Sprintf("%s %s", f.Name, f.Direction)
-		log.Println("order:", order)
+		order := fmt.Sprintf("%s %s", f.Name, f.Direction.Backward(c.Backward))
+		// log.Println("order:", order)
 		query = query.Order(order)
 		if c.Limit != 0 {
 			query = query.Limit(c.Limit + 1)
@@ -128,8 +128,11 @@ func columnName(field reflect.StructField) string {
 }
 
 //Backward of order type
-func (o DirectionType) Backward() DirectionType {
-	switch o {
+func (dt DirectionType) Backward(ok bool) DirectionType {
+	if !ok {
+		return dt
+	}
+	switch dt {
 	case DirectionDesc:
 		return DirectionAsc
 	case DirectionAsc:
@@ -167,6 +170,7 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 
 	nextCursor := (&Cursor{}).New(c.Limit)
 	prevCursor := (&Cursor{}).New(c.Limit)
+	prevCursor.Backward = true
 
 	var hasNext, hasPrev bool
 
@@ -188,7 +192,7 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 			lastVal := last.Field(i).Interface()
 			if f.Name == name {
 				nextCursor.AddField(name, lastVal, f.Direction)
-				prevCursor.AddField(name, firstVal, f.Direction.Backward())
+				prevCursor.AddField(name, firstVal, f.Direction)
 			}
 
 			if f.Value != nil {
