@@ -1,7 +1,5 @@
 package pagination
 
-import "log"
-
 type (
 	DefaultCursorGetter func() *Cursor
 
@@ -10,7 +8,6 @@ type (
 )
 
 func (p *Pagination) DefaultCursor() *Cursor {
-	log.Println("Return default cursor")
 	return &Cursor{
 		Fields: []Field{
 			Field{

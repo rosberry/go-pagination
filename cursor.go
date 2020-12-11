@@ -123,10 +123,6 @@ func (c *Cursor) GroupConditions(db *gorm.DB) *gorm.DB {
 	return c.order(c.where(db))
 }
 
-func columnName(field reflect.StructField) string {
-	return (&schema.NamingStrategy{}).ColumnName("", field.Name)
-}
-
 //Backward of order type
 func (dt DirectionType) Backward(ok bool) DirectionType {
 	if !ok {
@@ -187,7 +183,8 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 	//log.Println("name, val:", name, firstVal, lastVal)
 	for _, f := range c.Fields {
 		for i := 0; i < typ.NumField(); i++ {
-			name := columnName(typ.Field(i))
+			structField := typ.Field(i)
+			name := columnName(structField)
 			firstVal := first.Field(i).Interface()
 			lastVal := last.Field(i).Interface()
 			if f.Name == name {
@@ -214,4 +211,18 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 		HasNext: hasNext,
 		HasPrev: hasPrev,
 	}, object.Interface()
+}
+
+func columnName(field reflect.StructField) string {
+	log.Println("field:", field)
+	tags := field.Tag
+
+	var colName string
+
+	colName = tags.Get("cursor")
+	if colName == "" {
+		colName = (&schema.NamingStrategy{}).ColumnName("", field.Name)
+	}
+	log.Println("colName:", colName)
+	return colName
 }
