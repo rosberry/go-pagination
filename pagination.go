@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -19,13 +20,33 @@ type (
 	}
 
 	ScopeFunc func(db *gorm.DB) *gorm.DB
+
+	InitDecode struct {
+		model reflect.Value
+	}
 )
 
+//Model init for cursor decode
+func Model(model interface{}) *InitDecode {
+	if reflect.ValueOf(model).Kind() == reflect.Ptr {
+		return &InitDecode{
+			model: reflect.Indirect(reflect.ValueOf(model)),
+		}
+	}
+	return &InitDecode{
+		model: reflect.ValueOf(model),
+	}
+}
+
 //Decode request to cursor
-func Decode(c *gin.Context, cg DefaultCursorGetter) *Cursor {
+func (d *InitDecode) Decode(c *gin.Context, cg DefaultCursorGetter) *Cursor {
 	sortingQuery := c.Query("sorting")
 	cursorQuery := c.Query("cursor")
 
+	return decodeAction(d, sortingQuery, cursorQuery, cg)
+}
+
+func decodeAction(d *InitDecode, sortingQuery, cursorQuery string, cg DefaultCursorGetter) *Cursor {
 	if cursorQuery != "" {
 		//Work with cursor
 		//Decode string to cursor
@@ -36,13 +57,12 @@ func Decode(c *gin.Context, cg DefaultCursorGetter) *Cursor {
 	}
 
 	if sortingQuery != "" {
-		log.Println("Need unmarshal: ", sortingQuery)
 		var sort sorting
 		err := json.Unmarshal([]byte(sortingQuery), &sort)
 		if err != nil {
 			log.Println(err)
 		}
-		cursor := sort.toCursor()
+		cursor := sort.toCursor(d.model)
 		if cursor != nil {
 			return cursor
 		}
@@ -56,7 +76,7 @@ func Decode(c *gin.Context, cg DefaultCursorGetter) *Cursor {
 	return cursor
 }
 
-//decodeCursor from base64 string
+//decodeCursorString - decode cursor from base64 string
 func decodeCursor(s string) *Cursor {
 	var cursor Cursor
 	// Decode

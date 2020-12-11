@@ -1,6 +1,9 @@
 package pagination
 
-import "log"
+import (
+	"reflect"
+	"strings"
+)
 
 type (
 	sortingElem struct {
@@ -11,23 +14,24 @@ type (
 	sorting []sortingElem
 )
 
-func (srt *sorting) toCursor() *Cursor {
+func (srt *sorting) toCursor(model reflect.Value) *Cursor {
 	if srt == nil {
 		return nil
 	}
-	log.Printf("%+v\n", srt)
-	log.Println("Func sorting.toCursor() not implement!")
+
+	typ := model.Type()
 	cursor := &Cursor{
 		Limit:    defaultLimit,
 		Backward: false,
 	}
 
 	for _, e := range *srt {
-		direction, ok := DirectionByString[e.Direction]
+		direction, ok := DirectionByString[strings.ToLower(e.Direction)]
 		if !ok {
 			direction = DirectionAsc
 		}
-		cursor.AddField(e.Field, nil, direction)
+		fieldName := sortNameToDBName(e.Field, typ)
+		cursor.AddField(fieldName, nil, direction)
 	}
 	return cursor
 }

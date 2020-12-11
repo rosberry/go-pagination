@@ -217,7 +217,6 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 }
 
 func columnName(field reflect.StructField) string {
-	log.Println("field:", field)
 	tags := field.Tag
 
 	var colName string
@@ -226,7 +225,6 @@ func columnName(field reflect.StructField) string {
 	if colName == "" {
 		colName = (&schema.NamingStrategy{}).ColumnName("", field.Name)
 	}
-	log.Println("colName:", colName)
 	return colName
 }
 
@@ -239,4 +237,21 @@ func revert(object reflect.Value) reflect.Value {
 		result.Index(i).Set(object.Index(object.Len() - 1 - i))
 	}
 	return result
+}
+
+func sortNameToDBName(sortName string, typ reflect.Type) string {
+	for i := 0; i < typ.NumField(); i++ {
+		structField := typ.Field(i)
+		name := columnName(structField)
+
+		if sortName == name {
+			field := (&schema.Schema{}).ParseField(structField)
+			if field.DBName != "" {
+				return field.DBName
+			}
+			return (&schema.NamingStrategy{}).ColumnName("", field.Name)
+		}
+	}
+
+	return sortName
 }
