@@ -455,3 +455,49 @@ func TestResult(t *testing.T) {
 	}
 
 }
+
+func TestRevert(t *testing.T) {
+	type User struct {
+		ID         uint
+		NameOfUser string `gorm:"column:name" json:"name" cursor:"name"`
+		Count      uint
+	}
+
+	var users []User = []User{
+		User{0, "A", 99}, User{1, "B", 99}, User{2, "C", 99}, User{3, "D", 99},
+		User{4, "E", 99}, User{5, "F", 99}, User{6, "G", 99},
+	}
+
+	var revertUsers []User = []User{
+		User{6, "G", 99},
+		User{5, "F", 99},
+		User{4, "E", 99},
+		User{3, "D", 99},
+		User{2, "C", 99},
+		User{1, "B", 99},
+		User{0, "A", 99},
+	}
+
+	object := reflect.ValueOf(users)
+	object = revert(object)
+
+	revertUsersResult := object.Interface().([]User)
+
+	equal := func(a, b []User) bool {
+		if len(a) != len(b) {
+			log.Println("Not equal len")
+			return false
+		}
+		for i, v := range a {
+			if v != b[i] {
+				log.Printf("Not equal: %v %v\n", v, b[i])
+				return false
+			}
+		}
+		return true
+	}
+
+	if !equal(revertUsersResult, revertUsers) {
+		t.Error("Fail")
+	}
+}

@@ -174,6 +174,9 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 	if hasNext {
 		object = object.Slice(0, c.Limit)
 	}
+	if c.Backward {
+		object = revert(object)
+	}
 
 	first := object.Index(0)
 	last := object.Index(object.Len() - 1)
@@ -225,4 +228,15 @@ func columnName(field reflect.StructField) string {
 	}
 	log.Println("colName:", colName)
 	return colName
+}
+
+func revert(object reflect.Value) reflect.Value {
+	if object.Len() <= 1 {
+		return object
+	}
+	result := reflect.MakeSlice(object.Type(), object.Len(), object.Cap())
+	for i := 0; i < object.Len(); i++ {
+		result.Index(i).Set(object.Index(object.Len() - 1 - i))
+	}
+	return result
 }
