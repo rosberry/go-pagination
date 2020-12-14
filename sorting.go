@@ -33,5 +33,25 @@ func (srt *sorting) toCursor(model reflect.Value) *Cursor {
 		fieldName := sortNameToDBName(e.Field, typ)
 		cursor.AddField(fieldName, nil, direction)
 	}
+
+	//check and add id field
+	var idExist bool
+	for _, f := range cursor.Fields {
+		if f.Name == "id" {
+			idExist = true
+			break
+		}
+	}
+
+	if !idExist {
+		for i := 0; i < typ.NumField(); i++ {
+			structField := typ.Field(i)
+			if strings.ToLower(structField.Name) == "id" {
+				cursor.AddField("id", nil, DirectionAsc)
+				break
+			}
+		}
+	}
+
 	return cursor
 }
