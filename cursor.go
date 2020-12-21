@@ -183,10 +183,61 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 
 	typ := first.Type()
 
-	//log.Println("name, val:", name, firstVal, lastVal)
-	for _, f := range c.Fields {
+	var fieldSearch func(f Field, typ reflect.Type, indxs ...int)
+	fieldSearch = func(f Field, typ reflect.Type, indxs ...int) {
+		log.Println("indxs:", indxs)
 		for i := 0; i < typ.NumField(); i++ {
 			structField := typ.Field(i)
+			log.Println(i, structField.Name)
+
+			if structField.Type.Kind() == reflect.Struct && structField.Anonymous {
+				log.Println("it's embedded struct!: ", structField.Name)
+				fieldSearch(f, structField.Type, append(indxs, i)...)
+			}
+
+			name := columnName(structField)
+
+			var firstVal, lastVal interface{}
+			var fv, lv reflect.Value
+
+			if len(indxs) > 0 {
+				for i, indx := range indxs {
+					log.Println("indx:", indx)
+					if i == 0 {
+						fv, lv = first.Field(indx), last.Field(indx)
+					} else {
+						fv, lv = fv.Field(indx), lv.Field(indx)
+					}
+
+				}
+				firstVal, lastVal = fv.Field(i).Interface(), lv.Field(i).Interface()
+			} else {
+				firstVal, lastVal = first.Field(i).Interface(), last.Field(i).Interface()
+			}
+			if f.Name == name {
+				nextCursor.AddField(name, lastVal, f.Direction)
+				prevCursor.AddField(name, firstVal, f.Direction)
+			}
+
+			if f.Value != nil {
+				hasPrev = true
+			}
+
+		}
+	}
+
+	//log.Println("name, val:", name, firstVal, lastVal)
+	for _, f := range c.Fields {
+		fieldSearch(f, typ)
+		continue
+
+		for i := 0; i < typ.NumField(); i++ {
+			structField := typ.Field(i)
+
+			if structField.Type.Kind() == reflect.Struct {
+				log.Println("it's embedded struct!: ", structField.Name)
+			}
+
 			name := columnName(structField)
 			firstVal := first.Field(i).Interface()
 			lastVal := last.Field(i).Interface()

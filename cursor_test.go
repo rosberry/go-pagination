@@ -4,6 +4,7 @@ import (
 	"log"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"gorm.io/driver/postgres"
@@ -499,5 +500,106 @@ func TestRevert(t *testing.T) {
 
 	if !equal(revertUsersResult, revertUsers) {
 		t.Error("Fail")
+	}
+}
+
+func TestResultEmbeddedStruct(t *testing.T) {
+	type BaseModel struct {
+		ID        uint
+		CreatedAt time.Time
+	}
+	type BaseModelWithDelete struct {
+		BaseModel
+		DeletedAt *time.Time
+	}
+	type User struct {
+		BaseModelWithDelete
+		NameOfUser string `gorm:"column:name" json:"name" cursor:"name"`
+		Count      uint
+	}
+
+	var users []User = []User{
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 0}}, "A", 99},
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 1}}, "B", 90},
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 2}}, "C", 80},
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 3}}, "C", 70},
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 4}}, "C", 70},
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 5}}, "C", 70},
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 6}}, "D", 40},
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 7}}, "E", 30},
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 8}}, "F", 20},
+		User{BaseModelWithDelete{BaseModel: BaseModel{ID: 9}}, "G", 10},
+	}
+
+	cursor := &Cursor{
+		Fields: []Field{
+			Field{
+				Name:      "name",
+				Value:     nil,
+				Direction: DirectionAsc,
+			},
+			Field{
+				Name:      "id",
+				Value:     nil,
+				Direction: DirectionDesc,
+			},
+		},
+		Limit:    4,
+		Backward: false,
+	}
+
+	nextCursor := &Cursor{
+		Fields: []Field{
+			Field{
+				Name:      "name",
+				Value:     "C",
+				Direction: DirectionAsc,
+			},
+			Field{
+				Name:      "id",
+				Value:     3,
+				Direction: DirectionDesc,
+			},
+		},
+		Limit:    4,
+		Backward: false,
+	}
+	nextCursorStr := nextCursor.Encode()
+
+	prevCursor := &Cursor{
+		Fields: []Field{
+			Field{
+				Name:      "name",
+				Value:     "A",
+				Direction: DirectionAsc,
+			},
+			Field{
+				Name:      "id",
+				Value:     0,
+				Direction: DirectionDesc,
+			},
+		},
+		Limit:    4,
+		Backward: true,
+	}
+	prevCursorStr := prevCursor.Encode()
+
+	response, usersResp := cursor.Result(users)
+
+	log.Printf("resp: %+v\n", response)
+	log.Printf("users: %+v\n", usersResp)
+
+	if response.Next != nextCursorStr {
+		t.Errorf("Fail. Bad next cursor")
+	}
+	if !response.HasNext {
+		t.Errorf("Fail. Bad hasNext")
+	}
+
+	if response.Prev != prevCursorStr {
+		t.Errorf("Fail. Bad prev cursor")
+	}
+	if response.HasPrev {
+		t.Errorf("Fail. Bad hasPrev")
 	}
 }
