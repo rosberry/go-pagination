@@ -193,7 +193,8 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 				fieldSearch(f, structField.Type, append(indxs, i)...)
 			}
 
-			name := columnName(structField)
+			log.Println("structField.Name:", structField.Name)
+			name := fieldNameByDBName(structField)
 
 			var firstVal, lastVal interface{}
 			var fv, lv reflect.Value
@@ -211,6 +212,8 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 			} else {
 				firstVal, lastVal = first.Field(i).Interface(), last.Field(i).Interface()
 			}
+
+			log.Println(f.Name, ":", name)
 			if f.Name == name {
 				nextCursor.AddField(name, lastVal, f.Direction)
 				prevCursor.AddField(name, firstVal, f.Direction)
@@ -282,4 +285,15 @@ func sortNameToDBName(sortName string, typ reflect.Type) string {
 	}
 
 	return sortName
+}
+
+func fieldNameByDBName(f reflect.StructField) string {
+	if f.Anonymous {
+		return f.Name
+	}
+	field := (&schema.Schema{}).ParseField(f)
+	if field.DBName != "" {
+		return field.DBName
+	}
+	return (&schema.NamingStrategy{}).ColumnName("", f.Name)
 }
