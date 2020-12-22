@@ -219,12 +219,13 @@ func (m *Material) AfterFind(tx *gorm.DB) (err error) {
 //--
 //--
 func GetListForCursor(scope pagination.ScopeFunc) (materials Materials) {
-	models.DB.Scopes(scope).
+	models.DB.Table("(?) as t", models.DB.
 		Table("materials").
 		Select(`materials.*, 
-	(select count(1) from claps where claps.material_id = materials.id and claps.success = true) as claps,
-	(select count(1) from claps where claps.material_id = materials.id and claps.success = false) as failed_claps
-	`).
+			(select count(1) from claps where claps.material_id = materials.id and claps.success = true) as claps,
+			(select count(1) from claps where claps.material_id = materials.id and claps.success = false) as failed_claps
+			`)).
+		Scopes(scope).
 		Find(&materials)
 	return
 }
