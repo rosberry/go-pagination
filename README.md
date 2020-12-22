@@ -172,3 +172,61 @@ cursor = pagination2.Decode(c, item.AnotherCursor)
 cursor = pagination2.Decode(c, AnotherCursorWithoutModel)
 ```
 
+### Sorting on client
+
+Using the sorting configuration from client-side is recommended only in exceptional cases. By default, only the immediate fields of the main model support sorting. If you need to sort data by fields from related models ....
+
+As example
+
+```go
+type Material struct {
+		ID        uint `gorm:"primary_key"`
+		CreatedAt time.Time
+		UpdatedAt time.Time
+		DeletedAt gorm.DeletedAt `gorm:"index"`
+
+		Link    string
+		Type    cm.SocialNetworkType //Unical
+		Status  Status
+		Comment string
+
+		ItemID      string //Unical +
+		ItemOwnerID int    //Unical
+		ItemType    string
+
+		Claps       int64 `sql:"-"` //calculate from another table
+		FailedClaps int64 `sql:"-"` //calculate from another table
+
+		UserID uint
+	}
+
+
+//GetList return all materials (default flow)
+//--
+//--
+func GetList(scope pagination.ScopeFunc) (materials Materials) {
+	models.GetDB().Scopes(scope).Find(&materials)
+	return
+}
+func (m *Material) AfterFind(tx *gorm.DB) (err error) {
+	m.Claps = claps.SuccessCountByMaterial(m.ID)
+	m.FailedClaps = claps.FailedCountByMaterial(m.ID)
+	return nil
+}
+
+
+//GetList return all materials (if you want use cursor and sorting)
+//--
+//--
+func GetListForCursor(scope pagination.ScopeFunc) (materials Materials) {
+	models.DB.Scopes(scope).
+		Table("materials").
+		Select(`materials.*, 
+	(select count(1) from claps where claps.material_id = materials.id and claps.success = true) as claps,
+	(select count(1) from claps where claps.material_id = materials.id and claps.success = false) as failed_claps
+	`).
+		Find(&materials)
+	return
+}
+
+```
