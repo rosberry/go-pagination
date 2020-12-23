@@ -31,6 +31,9 @@ func (srt *sorting) toCursor(model reflect.Value) *Cursor {
 			direction = DirectionAsc
 		}
 		fieldName := sortNameToDBName(e.Field, typ)
+		if fieldName == "" {
+			return nil
+		}
 		cursor.AddField(fieldName, nil, direction)
 	}
 

@@ -293,7 +293,7 @@ func sortNameToDBName(sortName string, typ reflect.Type) string {
 		}
 	}
 
-	return sortName
+	return ""
 }
 
 func fieldNameByDBName(f reflect.StructField) string {
