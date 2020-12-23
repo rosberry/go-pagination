@@ -603,3 +603,97 @@ func TestResultEmbeddedStruct(t *testing.T) {
 		t.Errorf("Fail. Bad hasPrev")
 	}
 }
+
+func TestResultForBackwardCursor(t *testing.T) {
+	type User struct {
+		ID         uint
+		NameOfUser string `gorm:"column:name" json:"name" cursor:"name"`
+		Count      uint
+	}
+
+	var users []User = []User{
+		User{ID: 9, NameOfUser: "G", Count: 10},
+		User{ID: 8, NameOfUser: "F", Count: 20},
+		User{ID: 7, NameOfUser: "E", Count: 30},
+		User{ID: 6, NameOfUser: "D", Count: 40},
+		User{ID: 5, NameOfUser: "C", Count: 70},
+		User{ID: 4, NameOfUser: "C", Count: 70},
+		User{ID: 3, NameOfUser: "C", Count: 70},
+		User{ID: 2, NameOfUser: "C", Count: 80},
+		User{ID: 1, NameOfUser: "B", Count: 90},
+		User{ID: 0, NameOfUser: "A", Count: 99},
+	}
+
+	cursor := &Cursor{
+		Fields: []Field{
+			Field{
+				Name:      "name",
+				Value:     nil,
+				Direction: DirectionAsc,
+			},
+			Field{
+				Name:      "id",
+				Value:     nil,
+				Direction: DirectionDesc,
+			},
+		},
+		Limit:    4,
+		Backward: true,
+	}
+
+	nextCursor := &Cursor{
+		Fields: []Field{
+			Field{
+				Name:      "name",
+				Value:     "G",
+				Direction: DirectionAsc,
+			},
+			Field{
+				Name:      "id",
+				Value:     9,
+				Direction: DirectionDesc,
+			},
+		},
+		Limit:    4,
+		Backward: false,
+	}
+	nextCursorStr := nextCursor.Encode()
+
+	prevCursor := &Cursor{
+		Fields: []Field{
+			Field{
+				Name:      "name",
+				Value:     "D",
+				Direction: DirectionAsc,
+			},
+			Field{
+				Name:      "id",
+				Value:     6,
+				Direction: DirectionDesc,
+			},
+		},
+		Limit:    4,
+		Backward: true,
+	}
+	prevCursorStr := prevCursor.Encode()
+
+	response, usersResp := cursor.Result(users)
+
+	log.Printf("resp: %+v\n", response)
+	log.Printf("users: %+v\n", usersResp)
+
+	if response.Next != nextCursorStr {
+		t.Errorf("Fail. Bad next cursor")
+	}
+	if !response.HasNext {
+		t.Errorf("Fail. Bad hasNext")
+	}
+
+	if response.Prev != prevCursorStr {
+		t.Errorf("Fail. Bad prev cursor")
+	}
+	if !response.HasPrev {
+		t.Errorf("Fail. Bad hasPrev")
+	}
+
+}

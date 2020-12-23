@@ -170,12 +170,21 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 
 	var hasNext, hasPrev bool
 
-	hasNext = object.Len() > c.Limit
-	if hasNext {
-		object = object.Slice(0, c.Limit)
-	}
 	if c.Backward {
+		hasPrev = object.Len() > c.Limit
+		if hasPrev {
+			object = object.Slice(0, c.Limit)
+		}
+		hasNext = true
 		object = revert(object)
+	} else {
+		hasNext = object.Len() > c.Limit
+		if hasNext {
+			object = object.Slice(0, c.Limit)
+		}
+		if len(c.Fields) > 0 && c.Fields[0].Value != nil {
+			hasPrev = true
+		}
 	}
 
 	first := object.Index(0)
