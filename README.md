@@ -82,7 +82,7 @@ type (
 	responseWithPaging struct {
 		Result bool `json:"result"`
 		Items  []models.Item
-		Paging *pagination2.PaginationResponse
+		Paging *pagination.PaginationResponse
 	}
 )
 
@@ -94,7 +94,7 @@ func ItemsCursor(c *gin.Context) {
 	}
 
     //Decode cursor from request (gin context) 
-	cursor, _ := pagination2.Model(&models.Item{}).Decode(c, pagination2.DefaultCursor)
+	cursor, _ := pagination.Model(&models.Item{}).Decode(c, pagination.DefaultCursor)
 
     //Use cursor.Scope() in your model func
 	items := models.GetItems(request.Count, cursor.Scope())
@@ -120,8 +120,8 @@ func ItemsCursor(c *gin.Context) {
 
 #### Base usage
 ```go
-//pagination2.DefaultCursor
-cursor, _ := pagination2.Model(&models.Item{}).Decode(c, pagination2.DefaultCursor)
+//pagination.DefaultCursor
+cursor, _ := pagination.Model(&models.Item{}).Decode(c, pagination.DefaultCursor)
 ```
 
 #### Base cursor for model
@@ -132,17 +132,17 @@ type Item struct {
     ID         uint
     Title      string
 
-    pagination2.Pagination
+    pagination.Pagination
 }
 
 ...
-cursor, _ := pagination2.Model(&models.Item{}).Decode(c, item.DefaultCursor)
+cursor, _ := pagination.Model(&models.Item{}).Decode(c, item.DefaultCursor)
 ```
 
 And you can override default getter
 ```go
-func (i *Item) DefaultCursor() *pagination2.Cursor {
-	cursor := (&pagination2.Cursor{}).New(5)
+func (i *Item) DefaultCursor() *pagination.Cursor {
+	cursor := (&pagination.Cursor{}).New(5)
 	cursor.AddField("name", nil, "desc")
 
 	return cursor
@@ -151,8 +151,8 @@ func (i *Item) DefaultCursor() *pagination2.Cursor {
 
 or create another getter
 ```go
-func (i *Item) AnotherCursor() *pagination2.Cursor {
-	cursor := (&pagination2.Cursor{}).New(5)
+func (i *Item) AnotherCursor() *pagination.Cursor {
+	cursor := (&pagination.Cursor{}).New(5)
     cursor.AddField("name", nil, "desc")
     cursor.AddField("title", nil, "asc")
 
@@ -160,16 +160,16 @@ func (i *Item) AnotherCursor() *pagination2.Cursor {
 }
 
 
-func AnotherCursorWithoutModel() *pagination2.Cursor {
-	return (&pagination2.Cursor{}).New(5).AddField("name", nil, "desc").AddField("title", nil, "asc")
+func AnotherCursorWithoutModel() *pagination.Cursor {
+	return (&pagination.Cursor{}).New(5).AddField("name", nil, "desc").AddField("title", nil, "asc")
 }
 
 ```
 
 and use it
 ```go
-cursor, _ = pagination2.Model(&models.Item{}).Decode(c, item.AnotherCursor)
-cursor, _ = pagination2.Model(&models.Item{}).Decode(c, AnotherCursorWithoutModel)
+cursor, _ = pagination.Model(&models.Item{}).Decode(c, item.AnotherCursor)
+cursor, _ = pagination.Model(&models.Item{}).Decode(c, AnotherCursorWithoutModel)
 ```
 
 ### Sorting on client
