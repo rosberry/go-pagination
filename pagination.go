@@ -39,21 +39,26 @@ func Model(model interface{}) *InitDecode {
 }
 
 //Decode request to cursor
-func (d *InitDecode) Decode(c *gin.Context, cg DefaultCursorGetter) *Cursor {
+func (d *InitDecode) Decode(c *gin.Context, cg DefaultCursorGetter) (*Cursor, error) {
 	sortingQuery := c.Query("sorting")
 	cursorQuery := c.Query("cursor")
 
 	return decodeAction(d, sortingQuery, cursorQuery, cg)
 }
 
-func decodeAction(d *InitDecode, sortingQuery, cursorQuery string, cg DefaultCursorGetter) *Cursor {
+func decodeAction(d *InitDecode, sortingQuery, cursorQuery string, cg DefaultCursorGetter) (*Cursor, error) {
+	if cursorQuery != "" && sortingQuery != "" {
+		return nil, ErrCursorAndSortingTogether
+	}
+
 	if cursorQuery != "" {
 		//Work with cursor
 		//Decode string to cursor
 		cursor := decodeCursor(cursorQuery)
-		if cursor != nil {
-			return cursor
+		if cursor == nil {
+			return nil, ErrInvalidCursor
 		}
+		return cursor, nil
 	}
 
 	if sortingQuery != "" {
@@ -61,19 +66,24 @@ func decodeAction(d *InitDecode, sortingQuery, cursorQuery string, cg DefaultCur
 		err := json.Unmarshal([]byte(sortingQuery), &sort)
 		if err != nil {
 			log.Println(err)
+			return nil, ErrInvalidSorting
 		}
 		cursor := sort.toCursor(d.model)
-		if cursor != nil {
-			return cursor
+		if cursor == nil {
+			return nil, ErrInvalidSorting
 		}
+		return cursor, nil
 	}
 
 	//Make default cursor
 	cursor := cg()
+	if cursor == nil {
+		return nil, ErrInvalidDefaultCursor
+	}
 
 	//cursor to DB
 	//return *gorm.DB
-	return cursor
+	return cursor, nil
 }
 
 //decodeCursorString - decode cursor from base64 string

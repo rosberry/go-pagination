@@ -64,7 +64,7 @@ func TestToCursor(t *testing.T) {
 			"direction": "ASC"
 		}
 	]`
-	cursor = decodeAction(di, sortString, "", DefaultCursor)
+	cursor, _ = decodeAction(di, sortString, "", DefaultCursor) //TODO: Test errors
 	if !cursorCompare(cursor, cursorSuccess) {
 		t.Errorf("Fail sorting to Cursor\n%v\n%v\n", cursor, cursorSuccess)
 	}

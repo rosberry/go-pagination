@@ -94,7 +94,7 @@ func ItemsCursor(c *gin.Context) {
 	}
 
     //Decode cursor from request (gin context) 
-	cursor := pagination2.Decode(c, pagination2.DefaultCursor)
+	cursor, _ := pagination2.Model(&models.Item{}).Decode(c, pagination2.DefaultCursor)
 
     //Use cursor.Scope() in your model func
 	items := models.GetItems(request.Count, cursor.Scope())
@@ -121,7 +121,7 @@ func ItemsCursor(c *gin.Context) {
 #### Base usage
 ```go
 //pagination2.DefaultCursor
-cursor := pagination2.Decode(c, pagination2.DefaultCursor)
+cursor, _ := pagination2.Model(&models.Item{}).Decode(c, pagination2.DefaultCursor)
 ```
 
 #### Base cursor for model
@@ -136,7 +136,7 @@ type Item struct {
 }
 
 ...
-cursor := pagination2.Decode(c, item.DefaultCursor)
+cursor, _ := pagination2.Model(&models.Item{}).Decode(c, item.DefaultCursor)
 ```
 
 And you can override default getter
@@ -168,8 +168,8 @@ func AnotherCursorWithoutModel() *pagination2.Cursor {
 
 and use it
 ```go
-cursor = pagination2.Decode(c, item.AnotherCursor)
-cursor = pagination2.Decode(c, AnotherCursorWithoutModel)
+cursor, _ = pagination2.Model(&models.Item{}).Decode(c, item.AnotherCursor)
+cursor, _ = pagination2.Model(&models.Item{}).Decode(c, AnotherCursorWithoutModel)
 ```
 
 ### Sorting on client
