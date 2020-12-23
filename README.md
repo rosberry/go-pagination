@@ -5,11 +5,11 @@
 
 Request:
 ```
-GET \items
+GET /items
 ```
 
 ```
-GET \items?sorting=%5B%7B%22field%22:%22id%22,%22direction%22:%22desc%22%7D%5D
+GET /items?sorting=%5B%7B%22field%22:%22id%22,%22direction%22:%22desc%22%7D%5D
 
 object in sort:
 [
@@ -42,7 +42,7 @@ Response:
 Request next page:
 
 ```
-GET \items?"cursor": "ew2YWxU0Cn01ZSI6ogICJID"
+GET /items?cursor=ew2YWxU0Cn01ZSI6ogICJID
 ```
 
 Response (end):
