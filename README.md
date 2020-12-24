@@ -135,7 +135,7 @@ type Item struct {
     pagination.Pagination
 }
 
-...
+//...
 cursor, _ := pagination.Model(&models.Item{}).Decode(c, item.DefaultCursor)
 ```
 
@@ -170,6 +170,11 @@ and use it
 ```go
 cursor, _ = pagination.Model(&models.Item{}).Decode(c, item.AnotherCursor)
 cursor, _ = pagination.Model(&models.Item{}).Decode(c, AnotherCursorWithoutModel)
+```
+
+set a limit
+```go
+cursor, _ := pagination.Model(&models.Item{}).Limit(20).Decode(c, item.DefaultCursor)
 ```
 
 ### Sorting on client

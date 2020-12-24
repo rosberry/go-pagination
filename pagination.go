@@ -23,6 +23,7 @@ type (
 
 	InitDecode struct {
 		model reflect.Value
+		limit int
 	}
 )
 
@@ -36,6 +37,16 @@ func Model(model interface{}) *InitDecode {
 	return &InitDecode{
 		model: reflect.ValueOf(model),
 	}
+}
+
+//Limit set global limit for cursor
+//This value overrides whatever specify in DefaultCursorGetter
+func (d *InitDecode) Limit(limit int) *InitDecode {
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	d.limit = limit
+	return d
 }
 
 //Decode request to cursor
@@ -72,6 +83,9 @@ func decodeAction(d *InitDecode, sortingQuery, cursorQuery string, cg DefaultCur
 		if cursor == nil {
 			return nil, ErrInvalidSorting
 		}
+		if d.limit > 0 {
+			cursor.Limit = d.limit
+		}
 		return cursor, nil
 	}
 
@@ -79,6 +93,9 @@ func decodeAction(d *InitDecode, sortingQuery, cursorQuery string, cg DefaultCur
 	cursor := cg()
 	if cursor == nil {
 		return nil, ErrInvalidDefaultCursor
+	}
+	if d.limit > 0 {
+		cursor.Limit = d.limit
 	}
 
 	//cursor to DB
