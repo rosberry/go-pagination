@@ -92,8 +92,7 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 				query += s
 			}
 		}
-		//query += ")"
-		// log.Println("Additional query:", query)
+
 		if len(c.Fields) != 1 {
 			q = q.Or(query, val...)
 		} else {
@@ -108,7 +107,7 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 func (c *Cursor) order(query *gorm.DB) *gorm.DB {
 	for _, f := range c.Fields {
 		order := fmt.Sprintf("%s %s", f.Name, f.Direction.Backward(c.Backward))
-		// log.Println("order:", order)
+
 		query = query.Order(order)
 		if c.Limit != 0 {
 			query = query.Limit(c.Limit + 1)
@@ -196,13 +195,9 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 	fieldSearch = func(f Field, typ reflect.Type, indxs ...int) {
 		for i := 0; i < typ.NumField(); i++ {
 			structField := typ.Field(i)
-			log.Println(i, structField.Name)
-
 			if structField.Type.Kind() == reflect.Struct && structField.Anonymous {
 				fieldSearch(f, structField.Type, append(indxs, i)...)
 			}
-
-			log.Println("structField.Name:", structField.Name)
 			name := fieldNameByDBName(structField)
 
 			var firstVal, lastVal interface{}
@@ -222,7 +217,6 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 				firstVal, lastVal = first.Field(i).Interface(), last.Field(i).Interface()
 			}
 
-			log.Println(f.Name, ":", name)
 			if f.Name == name {
 				nextCursor.AddField(name, lastVal, f.Direction)
 				prevCursor.AddField(name, firstVal, f.Direction)
@@ -235,13 +229,10 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 		}
 	}
 
-	//log.Println("name, val:", name, firstVal, lastVal)
 	for _, f := range c.Fields {
 		fieldSearch(f, typ)
 		continue
 	}
-
-	//items = object.Interface() //??--
 
 	log.Printf("Prev cursor: %+v\n", prevCursor)
 	log.Printf("Next cursor: %+v\n", nextCursor)

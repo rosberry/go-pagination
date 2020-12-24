@@ -1,7 +1,6 @@
 package pagination
 
 import (
-	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -141,7 +140,8 @@ func TestEncode(t *testing.T) {
 	if str == "" {
 		t.Error("Failed cursor Encode")
 	}
-	log.Println(str)
+
+	t.Log(str)
 
 	if str != defaultCursorEncodeBase64Str {
 		t.Error("Encode string not equal result")
@@ -438,8 +438,8 @@ func TestResult(t *testing.T) {
 
 	response, usersResp := cursor.Result(users)
 
-	log.Printf("resp: %+v\n", response)
-	log.Printf("users: %+v\n", usersResp)
+	t.Logf("resp: %+v\n", response)
+	t.Logf("users: %+v\n", usersResp)
 
 	if response.Next != nextCursorStr {
 		t.Errorf("Fail. Bad next cursor")
@@ -486,12 +486,12 @@ func TestRevert(t *testing.T) {
 
 	equal := func(a, b []User) bool {
 		if len(a) != len(b) {
-			log.Println("Not equal len")
+			t.Log("Not equal len")
 			return false
 		}
 		for i, v := range a {
 			if v != b[i] {
-				log.Printf("Not equal: %v %v\n", v, b[i])
+				t.Logf("Not equal: %v %v\n", v, b[i])
 				return false
 			}
 		}
@@ -586,8 +586,8 @@ func TestResultEmbeddedStruct(t *testing.T) {
 
 	response, usersResp := cursor.Result(users)
 
-	log.Printf("resp: %+v\n", response)
-	log.Printf("users: %+v\n", usersResp)
+	t.Logf("resp: %+v\n", response)
+	t.Logf("users: %+v\n", usersResp)
 
 	if response.Next != nextCursorStr {
 		t.Errorf("Fail. Bad next cursor")
@@ -679,8 +679,8 @@ func TestResultForBackwardCursor(t *testing.T) {
 
 	response, usersResp := cursor.Result(users)
 
-	log.Printf("resp: %+v\n", response)
-	log.Printf("users: %+v\n", usersResp)
+	t.Logf("resp: %+v\n", response)
+	t.Logf("users: %+v\n", usersResp)
 
 	if response.Next != nextCursorStr {
 		t.Errorf("Fail. Bad next cursor")

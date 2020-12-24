@@ -65,7 +65,7 @@ func decodeAction(d *InitDecode, sortingQuery, cursorQuery string, cg DefaultCur
 		var sort sorting
 		err := json.Unmarshal([]byte(sortingQuery), &sort)
 		if err != nil {
-			log.Println(err)
+			log.Println("Unmarshal err:", err)
 			return nil, ErrInvalidSorting
 		}
 		cursor := sort.toCursor(d.model)
