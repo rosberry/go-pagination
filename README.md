@@ -34,7 +34,8 @@ Response:
         "hasPrev": false,
         "hasNext": true,
         "prev": "ew2YWxU0Cn01ZSI6ogICJID=",
-        "next": "ewogICJ2YWx1ZSI6IDU0Cn0="
+        "next": "ewogICJ2YWx1ZSI6IDU0Cn0=",
+		"totalRows": 10
     }
 }
 ```
@@ -175,6 +176,10 @@ cursor, _ = pagination.Model(&models.Item{}).Decode(c, AnotherCursorWithoutModel
 set a limit
 ```go
 cursor, _ := pagination.Model(&models.Item{}).Limit(20).Decode(c, item.DefaultCursor)
+```
+
+```go
+cursor, _ := pagination.Connection(models.DB).Model(&models.Item{}).Limit(20).Decode(c, item.DefaultCursor)
 ```
 
 ### Sorting on client
