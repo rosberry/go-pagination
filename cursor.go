@@ -20,6 +20,8 @@ type (
 		Fields   []Field `json:"fields"`
 		Limit    int     `json:"limit"`
 		Backward bool    `json:"backward"`
+
+		db *gorm.DB
 	}
 
 	//Field struct
@@ -239,12 +241,22 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 	log.Println("Has next:", hasNext)
 	log.Println("Has prev:", hasPrev)
 
-	return &PaginationResponse{
+	resp := &PaginationResponse{
 		Next:    nextCursor.Encode(),
 		Prev:    prevCursor.Encode(),
 		HasNext: hasNext,
 		HasPrev: hasPrev,
-	}, object.Interface()
+	}
+
+	if c.db != nil {
+		var count int64
+		if err := c.db.Model(first).Count(&count).Error; err == nil {
+			resp.TotalRows = int(count)
+		}
+
+	}
+
+	return resp, object.Interface()
 }
 
 func columnName(field reflect.StructField) string {
