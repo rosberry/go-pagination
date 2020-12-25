@@ -250,7 +250,7 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 
 	if c.db != nil {
 		var count int64
-		if err := c.db.Model(first).Count(&count).Error; err == nil {
+		if err := c.db.Model(tableName(typ)).Count(&count).Error; err == nil {
 			resp.TotalRows = int(count)
 		}
 
@@ -269,6 +269,11 @@ func columnName(field reflect.StructField) string {
 		colName = (&schema.NamingStrategy{}).ColumnName("", field.Name)
 	}
 	return colName
+}
+
+func tableName(typ reflect.Type) string {
+	name := typ.Name()
+	return (&schema.NamingStrategy{}).TableName(name)
 }
 
 func revert(object reflect.Value) reflect.Value {
