@@ -250,7 +250,7 @@ func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
 
 	if c.db != nil {
 		var count int64
-		if err := c.db.Model(tableName(typ)).Count(&count).Error; err == nil {
+		if err := c.db.Table(tableName(typ)).Count(&count).Error; err == nil {
 			resp.TotalRows = int(count)
 		}
 
