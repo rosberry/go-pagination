@@ -1,34 +1,55 @@
 package pagination
 
 import (
-	"reflect"
+	"log"
 	"testing"
+
+	"github.com/DATA-DOG/go-sqlmock"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-var (
-	emptyCursorString  = ""
-	failedCursorString = "abc"
-	notCursorJSON      = `{"a":1,"b":2"}`
-)
+var gormConf = &gorm.Config{
+	PrepareStmt: true,
+}
 
-func TestDecodeCursor(t *testing.T) {
-	result := decodeCursor(emptyCursorString)
-	if result != nil {
-		t.Errorf("Result must be %v for string: %v", "nil", emptyCursorString)
+func mockDB() *gorm.DB {
+	sqlDB, _, _ := sqlmock.New()
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), gormConf)
+	if err != nil {
+		log.Println(err)
+		return nil
 	}
+	return db.Debug()
+}
 
-	result = decodeCursor(failedCursorString)
-	if result != nil {
-		t.Errorf("Result must be %v for string: %v", "nil", failedCursorString)
+func liveDB() *gorm.DB {
+	connString := ""
+	db, err := gorm.Open(postgres.Open(connString), gormConf)
+	if err != nil {
+		log.Println(err)
+		return nil
 	}
+	return db.Debug()
+}
 
-	result = decodeCursor(notCursorJSON)
-	if result != nil {
-		t.Errorf("Result must be %v for string: %v", "nil", notCursorJSON)
-	}
+func TestMainFlow(t *testing.T) {
+	//model
+	db := mockDB()
+	db = db.Session(&gorm.Session{DryRun: true})
 
-	result = decodeCursor(defaultCursorEncodeBase64Str)
-	if !reflect.DeepEqual(defaultCursor, result) {
-		t.Error("Result must be equal defaultCursor")
+	type User struct {
+		ID    uint
+		Name  string
+		Count uint
 	}
+	var user User
+
+	stmt := db.Find(user).Statement
+	sql := stmt.SQL.String()
+
+	log.Println(sql)
+
+	//controller
+
 }
