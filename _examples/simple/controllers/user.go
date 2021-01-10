@@ -41,12 +41,14 @@ func usersListToData(u []models.User) []userData {
 func UsersList(c *gin.Context) {
 	paginator, err := pagination.New(pagination.Options{
 		GinContext: c,
-		Limit:      5,
+		Limit:      2,
+		Model:      &models.User{},
 	})
 	if err != nil {
 		log.Println(err)
 	}
 
+	log.Printf("Paginator: %+v\n", paginator)
 	users := models.GetUsersList(0, paginator)
 
 	c.JSON(200, usersListResponse{
