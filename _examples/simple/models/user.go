@@ -12,7 +12,7 @@ import (
 type User struct {
 	ID   uint
 	Name string
-	Role uint
+	Role uint `cursor:"roleID"`
 }
 
 func GetUsersList(role uint, paging *pagination.Paginator) []User {

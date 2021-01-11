@@ -48,7 +48,13 @@ func (srt *sorting) toCursor(model interface{}) *Cursor {
 	}
 
 	if !idExist {
-		typ := reflect.ValueOf(model).Type()
+		var typ reflect.Type
+		if reflect.ValueOf(model).Kind() == reflect.Ptr {
+			typ = reflect.Indirect(reflect.ValueOf(model)).Type()
+		} else {
+			typ = reflect.ValueOf(model).Type()
+		}
+
 		for i := 0; i < typ.NumField(); i++ {
 			structField := typ.Field(i)
 			if strings.ToLower(structField.Name) == "id" {
