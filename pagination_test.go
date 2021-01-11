@@ -1,34 +1,30 @@
 package pagination
 
 import (
-	"reflect"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
-var (
-	emptyCursorString  = ""
-	failedCursorString = "abc"
-	notCursorJSON      = `{"a":1,"b":2"}`
-)
+func TestMainFlow(t *testing.T) {
+	//http request-response
+	ts := httptest.NewServer(setupServer())
+	defer ts.Close()
 
-func TestDecodeCursor(t *testing.T) {
-	result := decodeCursor(emptyCursorString)
-	if result != nil {
-		t.Errorf("Result must be %v for string: %v", "nil", emptyCursorString)
+	// Make a request to our server with the {base url}/ping
+	resp, err := http.Get(fmt.Sprintf("%s/list", ts.URL))
+
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	result = decodeCursor(failedCursorString)
-	if result != nil {
-		t.Errorf("Result must be %v for string: %v", "nil", failedCursorString)
+	if resp.StatusCode != 200 {
+		t.Fatalf("Expected status code 200, got %v", resp.StatusCode)
 	}
 
-	result = decodeCursor(notCursorJSON)
-	if result != nil {
-		t.Errorf("Result must be %v for string: %v", "nil", notCursorJSON)
-	}
-
-	result = decodeCursor(defaultCursorEncodeBase64Str)
-	if !reflect.DeepEqual(defaultCursor, result) {
-		t.Error("Result must be equal defaultCursor")
-	}
 }
+
+//controller
+
+//model

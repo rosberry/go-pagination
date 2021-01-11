@@ -1,8 +1,10 @@
-package pagination
+package cursor
 
 import (
 	"reflect"
 	"strings"
+
+	"github.com/rosberry/go-pagination/common"
 )
 
 type (
@@ -14,23 +16,22 @@ type (
 	sorting []sortingElem
 )
 
-func (srt *sorting) toCursor(model reflect.Value) *Cursor {
+func (srt *sorting) toCursor(model interface{}) *Cursor {
 	if srt == nil {
 		return nil
 	}
 
-	typ := model.Type()
 	cursor := &Cursor{
-		Limit:    defaultLimit,
+		Limit:    common.DefaultLimit,
 		Backward: false,
 	}
 
 	for _, e := range *srt {
-		direction, ok := DirectionByString[strings.ToLower(e.Direction)]
+		direction, ok := common.DirectionByString[strings.ToLower(e.Direction)]
 		if !ok {
-			direction = DirectionAsc
+			direction = common.DirectionAsc
 		}
-		fieldName := sortNameToDBName(e.Field, typ)
+		fieldName := common.SortNameToDBName(e.Field, model)
 		if fieldName == "" {
 			return nil
 		}
@@ -47,10 +48,17 @@ func (srt *sorting) toCursor(model reflect.Value) *Cursor {
 	}
 
 	if !idExist {
+		var typ reflect.Type
+		if reflect.ValueOf(model).Kind() == reflect.Ptr {
+			typ = reflect.Indirect(reflect.ValueOf(model)).Type()
+		} else {
+			typ = reflect.ValueOf(model).Type()
+		}
+
 		for i := 0; i < typ.NumField(); i++ {
 			structField := typ.Field(i)
 			if strings.ToLower(structField.Name) == "id" {
-				cursor.AddField("id", nil, DirectionAsc)
+				cursor.AddField("id", nil, common.DirectionAsc)
 				break
 			}
 		}
