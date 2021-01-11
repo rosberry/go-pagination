@@ -104,7 +104,7 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 	q = q.Where(qList, val...)
 
 	//-------
-	return db.Where(q)
+	return q
 }
 
 //order convertation
