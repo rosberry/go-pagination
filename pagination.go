@@ -64,39 +64,42 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 		return common.ErrInvalidFindDestinationNotSlice
 	}
 
-	//query for totalRow
-	totalRows := count(tx)
-
 	//execute query
 	log.Printf("Paginator (Find): %+v\n", p)
 	if p.cursor == nil {
 		log.Println("Cursor is nil")
 		return common.ErrInvalidCursor
 	}
-	err := tx.Scopes(p.cursor.Scope()).Find(dst).Error //TODO:with scope
+
+	err := tx.Session(&gorm.Session{}).Scopes(p.cursor.Scope()).Find(dst).Error
 	if err != nil {
 		return err
 	}
 
 	//calc paginationinfo
+	//query for totalRow
+	totalRows := count(tx.Session(&gorm.Session{}))
+
 	//var pi PageInfo
 	object := reflect.Indirect(reflect.ValueOf(dst))
 	//first elem to prevCursor
-	first := object.Index(0)
-	nextCursor := p.cursor.ToCursor(first)
-	//last elem to nextCursor
 	last := object.Index(object.Len() - 1)
-	prevCursor := p.cursor.ToCursor(last)
+	nextCursor := p.cursor.ToCursor(last)
+
+	//last elem to nextCursor
+	first := object.Index(0)
+	prevCursor := p.cursor.ToCursor(first)
+	prevCursor.Backward = true
 
 	//query for hasPrev
 	var hasPrev int64
 	log.Println("Query for prev")
-	tx.Scopes(prevCursor.Scope()).Count(&hasPrev)
+	tx.Session(&gorm.Session{}).Scopes(prevCursor.Scope()).Count(&hasPrev)
 
 	//query for hasNext
 	var hasNext int64
 	log.Println("Query for next")
-	tx.Scopes(nextCursor.Scope()).Count(&hasNext) //!!!Not work!!
+	tx.Session(&gorm.Session{}).Scopes(nextCursor.Scope()).Count(&hasNext)
 
 	log.Println("nextCursor:", nextCursor)
 	log.Println("prevCursor:", prevCursor)
