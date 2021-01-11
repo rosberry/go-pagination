@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"pagination/common"
 	"reflect"
 	"strings"
+
+	"github.com/rosberry/go-pagination/common"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"

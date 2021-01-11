@@ -2,7 +2,8 @@ package models
 
 import (
 	"log"
-	"pagination"
+
+	"github.com/rosberry/go-pagination"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"gorm.io/driver/postgres"

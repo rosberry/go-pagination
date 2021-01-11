@@ -4,7 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log"
-	"pagination/common"
+
+	"github.com/rosberry/go-pagination/common"
 )
 
 func DecodeAction(sortingQuery, cursorQuery string, defaultCursor *Cursor, model interface{}, limit uint) (*Cursor, error) {

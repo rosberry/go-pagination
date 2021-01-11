@@ -3,8 +3,10 @@ package controllers
 import (
 	"fmt"
 	"log"
-	"pagination"
-	"pagination/_examples/simple/models"
+
+	"github.com/rosberry/go-pagination/_examples/simple/models"
+
+	"github.com/rosberry/go-pagination"
 
 	"github.com/gin-gonic/gin"
 )

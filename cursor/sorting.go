@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	"pagination/common"
+	"github.com/rosberry/go-pagination/common"
 )
 
 type (

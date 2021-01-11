@@ -2,7 +2,8 @@ package main
 
 import (
 	"log"
-	"pagination/_examples/simple/controllers"
+
+	"github.com/rosberry/go-pagination/_examples/simple/controllers"
 
 	"github.com/gin-gonic/gin"
 )

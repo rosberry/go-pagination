@@ -2,9 +2,10 @@ package pagination
 
 import (
 	"log"
-	"pagination/common"
-	"pagination/cursor"
 	"reflect"
+
+	"github.com/rosberry/go-pagination/common"
+	"github.com/rosberry/go-pagination/cursor"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
