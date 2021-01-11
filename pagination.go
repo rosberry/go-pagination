@@ -52,22 +52,17 @@ func New(o Options) (*Paginator, error) {
 }
 
 func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
-	log.Println("Paginator: Find()")
 	p.decode()
 	//check what dst is pointer to slice
 	if reflect.ValueOf(dst).Kind() != reflect.Ptr {
-		log.Println("dst is not pointer to slice!")
 		return common.ErrInvalidFindDestinationNotPointer
 	}
 	if reflect.Indirect(reflect.ValueOf(dst)).Kind() != reflect.Slice {
-		log.Println("dst pointer not to slice!:", reflect.TypeOf(reflect.Indirect(reflect.ValueOf(dst))).Kind())
 		return common.ErrInvalidFindDestinationNotSlice
 	}
 
 	//execute query
-	log.Printf("Paginator (Find): %+v\n", p)
 	if p.cursor == nil {
-		log.Println("Cursor is nil")
 		return common.ErrInvalidCursor
 	}
 
@@ -77,41 +72,40 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 	}
 
 	//calc paginationinfo
+	p.PageInfo = p.calcPageInfo(tx, dst)
+	return nil
+}
+
+func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
 	//query for totalRow
 	totalRows := count(tx.Session(&gorm.Session{}))
 
-	//var pi PageInfo
 	object := reflect.Indirect(reflect.ValueOf(dst))
 	//first elem to prevCursor
-	last := object.Index(object.Len() - 1)
-	nextCursor := p.cursor.ToCursor(last)
+	nextCursor := p.cursor.ToCursor(object.Index(object.Len() - 1))
 
 	//last elem to nextCursor
-	first := object.Index(0)
-	prevCursor := p.cursor.ToCursor(first)
+	prevCursor := p.cursor.ToCursor(object.Index(0))
 	prevCursor.Backward = true
 
 	//query for hasPrev
-	var hasPrev int64
-	log.Println("Query for prev")
-	tx.Session(&gorm.Session{}).Scopes(prevCursor.Scope()).Count(&hasPrev)
+	var prevCnt int64
+	tx.Session(&gorm.Session{}).Scopes(prevCursor.Scope()).Count(&prevCnt)
 
 	//query for hasNext
-	var hasNext int64
-	log.Println("Query for next")
-	tx.Session(&gorm.Session{}).Scopes(nextCursor.Scope()).Count(&hasNext)
+	var nextCnt int64
+	tx.Session(&gorm.Session{}).Scopes(nextCursor.Scope()).Count(&nextCnt)
 
-	log.Println("nextCursor:", nextCursor)
-	log.Println("prevCursor:", prevCursor)
 	//save paginationInfo to p
-	p.PageInfo = &PageInfo{
+	pageInfo := &PageInfo{
 		Next:      nextCursor.Encode(),
 		Prev:      prevCursor.Encode(),
-		HasNext:   hasNext > 0,
-		HasPrev:   hasPrev > 0,
+		HasNext:   nextCnt > 0,
+		HasPrev:   prevCnt > 0,
 		TotalRows: int(totalRows),
 	}
-	return nil
+
+	return pageInfo
 }
 
 func (p *Paginator) decode() error {

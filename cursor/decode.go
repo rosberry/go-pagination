@@ -44,12 +44,6 @@ func DecodeAction(sortingQuery, cursorQuery string, defaultCursor *Cursor, model
 		cursor.Limit = int(limit)
 	}
 
-	/*
-		if d.db != nil {
-			cursor.db = d.db
-		}
-	*/
-
 	return cursor, nil
 }
 
@@ -69,6 +63,5 @@ func decodeCursor(s string) *Cursor {
 		return nil
 	}
 
-	log.Printf("Cursor: %+v\n", cursor)
 	return &cursor
 }

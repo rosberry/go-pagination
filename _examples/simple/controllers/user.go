@@ -48,7 +48,6 @@ func UsersList(c *gin.Context) {
 		log.Println(err)
 	}
 
-	log.Printf("Paginator: %+v\n", paginator)
 	users := models.GetUsersList(0, paginator)
 
 	c.JSON(200, usersListResponse{

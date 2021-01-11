@@ -140,8 +140,7 @@ func (c *Cursor) Encode() string {
 func (c *Cursor) ToCursor(value reflect.Value) (cursor *Cursor) {
 	cursor = New(common.DefaultLimit)
 	typ := value.Type()
-	//value := reflect.ValueOf(elem)
-	log.Println(value)
+
 	var fieldSearch func(f Field, typ reflect.Type, indxs ...int)
 	fieldSearch = func(f Field, typ reflect.Type, indxs ...int) {
 		for i := 0; i < typ.NumField(); i++ {
@@ -168,10 +167,8 @@ func (c *Cursor) ToCursor(value reflect.Value) (cursor *Cursor) {
 				val = value.Field(i).Interface()
 			}
 
-			log.Println("f.Name == name", f.Name, name)
 			if f.Name == name {
 				cursor.AddField(name, val, f.Direction)
-				log.Println("Add field:", cursor)
 			}
 		}
 	}
@@ -193,113 +190,3 @@ func fieldNameByDBName(f reflect.StructField) string {
 	}
 	return (&schema.NamingStrategy{}).ColumnName("", f.Name)
 }
-
-//Result - create new cursors by result list and modify items
-/*
-func (c *Cursor) Result(items interface{}) (*PaginationResponse, interface{}) {
-	log.Printf("Init cursor: %+v\n", c)
-
-	if reflect.TypeOf(items).Kind() != reflect.Slice {
-		return nil, nil
-	}
-
-	object := reflect.ValueOf(items)
-
-	if object.Len() == 0 {
-		return nil, nil
-	}
-
-	nextCursor := New(c.Limit)
-	prevCursor := New(c.Limit)
-	prevCursor.Backward = true
-
-	var hasNext, hasPrev bool
-
-	if c.Backward {
-		hasPrev = object.Len() > c.Limit
-		if hasPrev {
-			object = object.Slice(0, c.Limit)
-		}
-		hasNext = true
-		object = revert(object)
-	} else {
-		hasNext = object.Len() > c.Limit
-		if hasNext {
-			object = object.Slice(0, c.Limit)
-		}
-		if len(c.Fields) > 0 && c.Fields[0].Value != nil {
-			hasPrev = true
-		}
-	}
-
-	first := object.Index(0)
-	last := object.Index(object.Len() - 1)
-
-	typ := first.Type()
-
-	var fieldSearch func(f Field, typ reflect.Type, indxs ...int)
-	fieldSearch = func(f Field, typ reflect.Type, indxs ...int) {
-		for i := 0; i < typ.NumField(); i++ {
-			structField := typ.Field(i)
-			if structField.Type.Kind() == reflect.Struct && structField.Anonymous {
-				fieldSearch(f, structField.Type, append(indxs, i)...)
-			}
-			name := fieldNameByDBName(structField)
-
-			var firstVal, lastVal interface{}
-			var fv, lv reflect.Value
-
-			if len(indxs) > 0 {
-				for i, indx := range indxs {
-					if i == 0 {
-						fv, lv = first.Field(indx), last.Field(indx)
-					} else {
-						fv, lv = fv.Field(indx), lv.Field(indx)
-					}
-
-				}
-				firstVal, lastVal = fv.Field(i).Interface(), lv.Field(i).Interface()
-			} else {
-				firstVal, lastVal = first.Field(i).Interface(), last.Field(i).Interface()
-			}
-
-			if f.Name == name {
-				nextCursor.AddField(name, lastVal, f.Direction)
-				prevCursor.AddField(name, firstVal, f.Direction)
-			}
-
-			if f.Value != nil {
-				hasPrev = true
-			}
-
-		}
-	}
-
-	for _, f := range c.Fields {
-		fieldSearch(f, typ)
-		continue
-	}
-
-	log.Printf("Prev cursor: %+v\n", prevCursor)
-	log.Printf("Next cursor: %+v\n", nextCursor)
-	log.Println("Has next:", hasNext)
-	log.Println("Has prev:", hasPrev)
-
-	resp := &PaginationResponse{
-		Next:    nextCursor.Encode(),
-		Prev:    prevCursor.Encode(),
-		HasNext: hasNext,
-		HasPrev: hasPrev,
-	}
-
-	if c.db != nil {
-		var count int64
-		if err := c.db.Table(tableName(typ)).Count(&count).Error; err == nil {
-			resp.TotalRows = int(count)
-		}
-
-	}
-
-	return resp, object.Interface()
-}
-*/
