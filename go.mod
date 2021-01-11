@@ -1,4 +1,4 @@
-module pagination
+module github.com/rosberry/go-pagination
 
 go 1.14
 
