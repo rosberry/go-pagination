@@ -23,6 +23,7 @@ type (
 		DefaultCursor *cursor.Cursor
 		Model         interface{}
 		Limit         uint
+		DB            *gorm.DB
 	}
 
 	PageInfo struct {
@@ -117,6 +118,7 @@ func (p *Paginator) decode() error {
 		return err
 	}
 
+	cursor.DB = p.DB
 	p.cursor = cursor
 	return nil
 }

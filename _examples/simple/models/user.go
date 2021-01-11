@@ -15,14 +15,18 @@ type User struct {
 	Role uint `cursor:"roleID"`
 }
 
-func GetUsersList(role uint, paging *pagination.Paginator) []User {
+func GetUsersList(role uint, paginator *pagination.Paginator) []User {
 	//db := mockDB().Session(&gorm.Session{DryRun: true})
 	db := liveDB().Session(&gorm.Session{DryRun: false})
+
+	paginator.Options.Limit = 2
+	paginator.Options.DB = db
+	paginator.Options.Model = &User{}
 
 	var users []User
 	q := db.Model(&User{}).Where("role = ?", role)
 
-	err := paging.Find(q, &users)
+	err := paginator.Find(q, &users)
 	if err != nil {
 		log.Println(err)
 		return nil

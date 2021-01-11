@@ -41,8 +41,6 @@ func usersListToData(u []models.User) []userData {
 func UsersList(c *gin.Context) {
 	paginator, err := pagination.New(pagination.Options{
 		GinContext: c,
-		Limit:      2,
-		Model:      &models.User{},
 	})
 	if err != nil {
 		log.Println(err)

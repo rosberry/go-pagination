@@ -7,6 +7,7 @@ import (
 	"log"
 	"pagination/common"
 	"reflect"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
@@ -19,7 +20,7 @@ type (
 		Limit    int     `json:"limit"`
 		Backward bool    `json:"backward"`
 
-		db *gorm.DB
+		DB *gorm.DB `json:"-"`
 	}
 
 	//Field struct
@@ -70,6 +71,8 @@ func (c *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 //where convertation
 func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 	q := db
+	var qList string
+	val := make([]interface{}, 0)
 	//Make cursor query
 	for i, f := range c.Fields {
 		if f.Value == nil {
@@ -77,7 +80,6 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 		}
 		//query := "("
 		query := ""
-		val := make([]interface{}, 0)
 		for j := 0; j <= i; j++ {
 			if j != i {
 				s := fmt.Sprintf("%v %v ?", c.Fields[j].Name, "=")
@@ -96,12 +98,11 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 			}
 		}
 
-		if len(c.Fields) != 1 {
-			q = q.Or(query, val...)
-		} else {
-			q = q.Where(query, val...)
-		}
+		qList += fmt.Sprintf(" OR (%v)", query)
 	}
+	qList = strings.Replace(qList, " OR (", "(", 1)
+	q = q.Where(qList, val...)
+
 	//-------
 	return db.Where(q)
 }
@@ -139,6 +140,7 @@ func (c *Cursor) Encode() string {
 
 func (c *Cursor) ToCursor(value reflect.Value) (cursor *Cursor) {
 	cursor = New(common.DefaultLimit)
+	cursor.DB = c.DB
 	typ := value.Type()
 
 	var fieldSearch func(f Field, typ reflect.Type, indxs ...int)
