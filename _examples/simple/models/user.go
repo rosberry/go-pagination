@@ -10,9 +10,10 @@ import (
 )
 
 type User struct {
-	ID   uint
-	Name string
-	Role uint `cursor:"roleID"`
+	ID        uint
+	Name      string
+	Role      uint `cursor:"roleID"`
+	DeletedAt gorm.DeletedAt
 }
 
 func GetUsersList(role uint, paginator *pagination.Paginator) []User {

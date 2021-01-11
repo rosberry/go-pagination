@@ -59,15 +59,28 @@ Response (end):
 
 ### Model
 ```go
+package models
+
 import "github.com/rosberry/go-pagination"
 
-//Add ScopeFunc to your database query func
-//and use it as .Scopes() argument
-func GetItems(count uint, scope pagination.ScopeFunc) []Item {
-	var items []Item
 
-	db.DB.Model(&Item{}).Scopes(scope).Where("count < 22").Find(&items)
-	return items
+type User struct {
+	ID   uint
+	Name string
+	Role uint `json:"roleID" cursor:"roleID"`
+}
+
+func GetUsersList(role uint, paginator *pagination.Paginator) []User {
+	var users []User
+	q := db.DB.Model(&User{}).Where("role = ?", role)
+
+	err := paginator.Find(q, &users)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	return users
 }
 ```
 
@@ -76,168 +89,34 @@ func GetItems(count uint, scope pagination.ScopeFunc) []Item {
 import "github.com/rosberry/go-pagination"
 
 type (
-	itemRequest struct {
-		Count uint `json:"count" form:"count"`
-	}
-
-	responseWithPaging struct {
-		Result bool `json:"result"`
-		Items  []models.Item
-		Paging *pagination.PaginationResponse
+	usersListResponse struct {
+		Result     bool
+		Users      []userData
+		Pagination *pagination.PageInfo
 	}
 )
 
-func ItemsCursor(c *gin.Context) {
-	var request itemRequest
-	if err := c.Bind(&request); err != nil {
-		c.JSON(http.StatusBadRequest, cm.Error[cm.ErrReqInvalid])
-		return
-	}
 
-    //Decode cursor from request (gin context) 
-	cursor, _ := pagination.Model(&models.Item{}).Decode(c, pagination.DefaultCursor)
-
-    //Use cursor.Scope() in your model func
-	items := models.GetItems(request.Count, cursor.Scope())
-
-    //Use cursor.Result() to get paging response and modify result
-	paging, result := cursor.Result(items)
-
-    //Assertion result to your type
-	items = result.([]models.Item)
-
-	c.JSON(http.StatusOK, responseWithPaging{
-		Result: true,
-		Items:  items,
-		Paging: paging,
+func UsersList(c *gin.Context) {
+	paginator, err := pagination.New(pagination.Options{
+		GinContext: c,
+		//next can be move to model as paginator.Model = &User{} etc...
+		DB: models.GetDB(),
+		Model: &models.User{},
+		Limit: 5,
+		DefaultCursor: nil,
 	})
-}
-
-```
-
-## Advanced
-
-### Default cursor
-
-#### Base usage
-```go
-//pagination.DefaultCursor
-cursor, _ := pagination.Model(&models.Item{}).Decode(c, pagination.DefaultCursor)
-```
-
-#### Base cursor for model
-Add embedded struct to your model and you can use DefaultCursorGetter() for model
-
-```go
-type Item struct {
-    ID         uint
-    Title      string
-
-    pagination.Pagination
-}
-
-//...
-cursor, _ := pagination.Model(&models.Item{}).Decode(c, item.DefaultCursor)
-```
-
-And you can override default getter
-```go
-func (i *Item) DefaultCursor() *pagination.Cursor {
-	cursor := (&pagination.Cursor{}).New(5)
-	cursor.AddField("name", nil, "desc")
-
-	return cursor
-}
-```
-
-or create another getter
-```go
-func (i *Item) AnotherCursor() *pagination.Cursor {
-	cursor := (&pagination.Cursor{}).New(5)
-    cursor.AddField("name", nil, "desc")
-    cursor.AddField("title", nil, "asc")
-
-	return cursor
-}
-
-
-func AnotherCursorWithoutModel() *pagination.Cursor {
-	return (&pagination.Cursor{}).New(5).AddField("name", nil, "desc").AddField("title", nil, "asc")
-}
-
-```
-
-and use it
-```go
-cursor, _ = pagination.Model(&models.Item{}).Decode(c, item.AnotherCursor)
-cursor, _ = pagination.Model(&models.Item{}).Decode(c, AnotherCursorWithoutModel)
-```
-
-set a limit
-```go
-cursor, _ := pagination.Model(&models.Item{}).Limit(20).Decode(c, item.DefaultCursor)
-```
-
-```go
-cursor, _ := pagination.Connection(models.DB).Model(&models.Item{}).Limit(20).Decode(c, item.DefaultCursor)
-```
-
-### Sorting on client
-
-Using the sorting configuration from client-side is recommended only in exceptional cases. By default, only the immediate fields of the main model support sorting. If you need to sort data by fields from related models ....
-
-As example
-
-```go
-type Material struct {
-		ID        uint `gorm:"primary_key"`
-		CreatedAt time.Time
-		UpdatedAt time.Time
-		DeletedAt gorm.DeletedAt `gorm:"index"`
-
-		Link    string
-		Type    cm.SocialNetworkType //Unical
-		Status  Status
-		Comment string
-
-		ItemID      string //Unical +
-		ItemOwnerID int    //Unical
-		ItemType    string
-
-		Claps       int64 `sql:"-"` //calculate from another table
-		FailedClaps int64 `sql:"-"` //calculate from another table
-
-		UserID uint
+	if err != nil {
+		log.Println(err)
 	}
 
+	users := models.GetUsersList(0, paginator)
 
-//GetList return all materials (default flow)
-//--
-//--
-func GetList(scope pagination.ScopeFunc) (materials Materials) {
-	models.GetDB().Scopes(scope).Find(&materials)
-	return
-}
-func (m *Material) AfterFind(tx *gorm.DB) (err error) {
-	m.Claps = claps.SuccessCountByMaterial(m.ID)
-	m.FailedClaps = claps.FailedCountByMaterial(m.ID)
-	return nil
-}
-
-
-//GetList return all materials (if you want use cursor and sorting)
-//--
-//--
-func GetListForCursor(scope pagination.ScopeFunc) (materials Materials) {
-	models.DB.Table("(?) as t", models.DB.
-		Table("materials").
-		Select(`materials.*, 
-			(select count(1) from claps where claps.material_id = materials.id and claps.success = true) as claps,
-			(select count(1) from claps where claps.material_id = materials.id and claps.success = false) as failed_claps
-			`)).
-		Scopes(scope).
-		Find(&materials)
-	return
+	c.JSON(200, usersListResponse{
+		Result:     true,
+		Users:      usersListToData(users),
+		Pagination: paginator.PageInfo,
+	})
 }
 
 ```
