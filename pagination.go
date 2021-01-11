@@ -92,11 +92,11 @@ func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
 
 	//query for hasPrev
 	var prevCnt int64
-	tx.Session(&gorm.Session{}).Scopes(prevCursor.Scope()).Count(&prevCnt)
+	prevCnt = count(tx.Session(&gorm.Session{}).Scopes(prevCursor.Scope()))
 
 	//query for hasNext
 	var nextCnt int64
-	tx.Session(&gorm.Session{}).Scopes(nextCursor.Scope()).Count(&nextCnt)
+	nextCnt = count(tx.Session(&gorm.Session{}).Scopes(nextCursor.Scope()))
 
 	//save paginationInfo to p
 	pageInfo := &PageInfo{
@@ -125,7 +125,7 @@ func (p *Paginator) decode() error {
 }
 
 func count(tx *gorm.DB) (count int64) {
-	if err := tx.Count(&count).Error; err != nil {
+	if err := tx.Session(&gorm.Session{}).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
 		log.Println(err)
 		return -1
 	}
