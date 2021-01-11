@@ -90,20 +90,12 @@ func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
 	prevCursor := p.cursor.ToCursor(object.Index(0))
 	prevCursor.Backward = true
 
-	//query for hasPrev
-	var prevCnt int64
-	prevCnt = count(tx.Session(&gorm.Session{}).Scopes(prevCursor.Scope()))
-
-	//query for hasNext
-	var nextCnt int64
-	nextCnt = count(tx.Session(&gorm.Session{}).Scopes(nextCursor.Scope()))
-
 	//save paginationInfo to p
 	pageInfo := &PageInfo{
 		Next:      nextCursor.Encode(),
 		Prev:      prevCursor.Encode(),
-		HasNext:   nextCnt > 0,
-		HasPrev:   prevCnt > 0,
+		HasNext:   p.checkPage(tx.Session(&gorm.Session{}), nextCursor.Scope()),
+		HasPrev:   p.checkPage(tx.Session(&gorm.Session{}), prevCursor.Scope()),
 		TotalRows: int(totalRows),
 	}
 
@@ -128,6 +120,18 @@ func count(tx *gorm.DB) (count int64) {
 	if err := tx.Session(&gorm.Session{}).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
 		log.Println(err)
 		return -1
+	}
+	return
+}
+
+func (p *Paginator) checkPage(tx *gorm.DB, scope func(*gorm.DB) *gorm.DB) (isExist bool) {
+	var count int64
+	if err := p.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(scope).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
+		log.Println(err)
+		return
+	}
+	if count > 0 {
+		return true
 	}
 	return
 }
