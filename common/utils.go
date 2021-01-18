@@ -101,6 +101,9 @@ func searchField(name string, model interface{}) (field interface{}, n string) {
 
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
+		if f.Type.Kind() == reflect.Struct && f.Anonymous {
+			return searchField(name, val.Field(i).Interface())
+		}
 		if sName, dbNme := fieldName(f); name == sName {
 			return val.Field(i).Interface(), dbNme
 		}

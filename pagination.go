@@ -81,7 +81,7 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 
 func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
 	//query for totalRow
-	totalRows := count(tx.Session(&gorm.Session{}))
+	totalRows := p.count(tx.Session(&gorm.Session{}))
 
 	object := reflect.Indirect(reflect.ValueOf(dst))
 	//first elem to prevCursor
@@ -117,8 +117,8 @@ func (p *Paginator) decode() error {
 	return nil
 }
 
-func count(tx *gorm.DB) (count int64) {
-	if err := tx.Session(&gorm.Session{}).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
+func (p *Paginator) count(tx *gorm.DB) (count int64) {
+	if err := p.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
 		log.Println(err)
 		return -1
 	}
