@@ -2,6 +2,7 @@ package models
 
 import (
 	"log"
+	"time"
 
 	"github.com/rosberry/go-pagination"
 
@@ -10,12 +11,45 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
-	ID        uint
-	Name      string
-	Role      uint `cursor:"roleID"`
-	DeletedAt gorm.DeletedAt
-}
+type (
+	BaseModel struct {
+		ID        uint
+		CreatedAt time.Time
+		UpdatedAt time.Time
+		DeletedAt gorm.DeletedAt
+	}
+
+	User struct {
+		BaseModel
+		Name     string
+		Role     uint `cursor:"roleID"`
+		Clappers []Clapper
+	}
+
+	Clapper struct {
+		BaseModel
+		UserID uint
+		Name   string
+		Token  string
+	}
+
+	Material struct {
+		ID        uint `gorm:"primary_key"`
+		CreatedAt time.Time
+		UpdatedAt time.Time
+		DeletedAt gorm.DeletedAt `gorm:"index"`
+
+		Link    string
+		Comment string
+
+		ItemID      string //Unical +
+		ItemOwnerID int    //Unical
+		ItemType    string
+
+		UserID uint
+		User   User `gorm:"foreignKey:UserID"`
+	}
+)
 
 func GetUsersList(role uint, paginator *pagination.Paginator) []User {
 	//db := mockDB().Session(&gorm.Session{DryRun: true})
@@ -26,7 +60,7 @@ func GetUsersList(role uint, paginator *pagination.Paginator) []User {
 	paginator.Options.Model = &User{}
 
 	var users []User
-	q := db.Model(&User{}).Where("role = ?", role)
+	q := db.Model(&User{}).Preload("Clappers").Where("id < ?", 190)
 
 	err := paginator.Find(q, &users)
 	if err != nil {
@@ -34,7 +68,22 @@ func GetUsersList(role uint, paginator *pagination.Paginator) []User {
 		return nil
 	}
 
+	log.Printf("User: %+v", users)
 	return users
+}
+
+//GetMaterialsList return all materials
+func GetMaterialsList(paginator *pagination.Paginator) (materials []Material) {
+	db := liveDB().Session(&gorm.Session{DryRun: false})
+
+	paginator.Options.Limit = 2
+	paginator.Options.DB = db
+	paginator.Options.Model = &Material{}
+
+	q := db.Model(&Material{}).Joins("User")
+
+	paginator.Find(q, &materials)
+	return
 }
 
 //DB connection

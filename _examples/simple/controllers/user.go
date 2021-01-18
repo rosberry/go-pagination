@@ -13,15 +13,22 @@ import (
 
 type (
 	userData struct {
-		ID       uint   `json:"id"`
-		Name     string `json:"name"`
-		Role     uint   `json:"roleID"`
-		RoleName string `json:"role"`
+		ID       uint             `json:"id"`
+		Name     string           `json:"name"`
+		Role     uint             `json:"roleID"`
+		RoleName string           `json:"role"`
+		Clappers []models.Clapper `json:"clappers"`
 	}
 
 	usersListResponse struct {
 		Result     bool
 		Users      []userData
+		Pagination *pagination.PageInfo
+	}
+
+	materialsListResponse struct {
+		Result     bool
+		Materials  []models.Material
 		Pagination *pagination.PageInfo
 	}
 )
@@ -34,6 +41,7 @@ func usersListToData(u []models.User) []userData {
 			Name:     um.Name,
 			Role:     um.Role,
 			RoleName: fmt.Sprintf("stub %v", i),
+			Clappers: um.Clappers,
 		}
 	}
 
@@ -53,6 +61,23 @@ func UsersList(c *gin.Context) {
 	c.JSON(200, usersListResponse{
 		Result:     true,
 		Users:      usersListToData(users),
+		Pagination: paginator.PageInfo,
+	})
+}
+
+func Materials(c *gin.Context) {
+	paginator, err := pagination.New(pagination.Options{
+		GinContext: c,
+	})
+	if err != nil {
+		log.Println(err)
+	}
+
+	m := models.GetMaterialsList(paginator)
+
+	c.JSON(200, materialsListResponse{
+		Result:     true,
+		Materials:  m,
 		Pagination: paginator.PageInfo,
 	})
 }

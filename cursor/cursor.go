@@ -178,7 +178,6 @@ func (c *Cursor) ToCursor(value reflect.Value) (cursor *Cursor) {
 
 	for _, f := range c.Fields {
 		fieldSearch(f, typ)
-		continue
 	}
 	return
 }

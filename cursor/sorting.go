@@ -31,7 +31,7 @@ func (srt *sorting) toCursor(model interface{}) *Cursor {
 		if !ok {
 			direction = common.DirectionAsc
 		}
-		fieldName := common.SortNameToDBName(e.Field, model)
+		fieldName := common.NSortNameToDBName(e.Field, model)
 		if fieldName == "" {
 			return nil
 		}

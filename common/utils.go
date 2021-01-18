@@ -1,8 +1,10 @@
 package common
 
 import (
+	"fmt"
 	"log"
 	"reflect"
+	"strings"
 
 	"gorm.io/gorm/schema"
 )
@@ -15,7 +17,7 @@ func SortNameToDBName(sortName string, model interface{}) string {
 		typ = reflect.ValueOf(model).Type()
 	}
 
-	log.Println(sortName, typ.Kind())
+	//log.Println(sortName, typ.Kind())
 	if typ.Kind() != reflect.Struct {
 		return ""
 	}
@@ -59,4 +61,75 @@ func (dt DirectionType) Backward(ok bool) DirectionType {
 	default:
 		return DirectionAsc
 	}
+}
+
+func NSortNameToDBName(sortName string, model interface{}) (dbName string) {
+	//modify sortName
+	namesChain := strings.Split(sortName, ".")
+
+	for _, n := range namesChain {
+		f, name := searchField(n, model)
+		if f == nil {
+			return ""
+		}
+		model = f
+		dbName += name + "."
+	}
+	return strings.TrimRight(dbName, ".")
+}
+
+func searchField(name string, model interface{}) (field interface{}, n string) {
+	name = strings.ToLower(name)
+
+	var typ reflect.Type
+	var val reflect.Value
+
+	if reflect.ValueOf(model).Kind() == reflect.Ptr {
+		typ = reflect.Indirect(reflect.ValueOf(model)).Type()
+		val = reflect.Indirect(reflect.ValueOf(model))
+	} else {
+		typ = reflect.ValueOf(model).Type()
+		val = reflect.ValueOf(model)
+	}
+
+	//log.Println(name, typ.Kind(), typ.Name(), typ.String())
+
+	if typ.Kind() != reflect.Struct {
+		log.Printf("Not struct: %v\n", typ.Name())
+		return nil, ""
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		if sName, dbNme := fieldName(f); name == sName {
+			return val.Field(i).Interface(), dbNme
+		}
+	}
+	log.Printf("Not found field %s in struct %v\n", name, typ.Name())
+	return nil, ""
+}
+
+func fieldName(f reflect.StructField) (sortName, dbName string) {
+	if t := f.Tag.Get("cursor"); t != "" {
+		sortName = t
+	} else {
+		sortName = strings.ToLower(f.Name)
+	}
+	dbName = getDbName(f)
+
+	return
+}
+
+func getDbName(f reflect.StructField) (dbName string) {
+	if f.Type.Kind() == reflect.Struct {
+		return fmt.Sprintf(`"%s"`, f.Name)
+	}
+
+	field := (&schema.Schema{}).ParseField(f)
+	if field != nil && field.DBName != "" {
+		dbName = field.DBName
+	}
+	dbName = (&schema.NamingStrategy{}).ColumnName("", field.Name)
+
+	return
 }

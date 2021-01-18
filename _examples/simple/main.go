@@ -20,6 +20,7 @@ func setupServer() *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/list", controllers.UsersList)
+	r.GET("/m", controllers.Materials)
 
 	return r
 }
