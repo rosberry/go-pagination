@@ -32,6 +32,9 @@ func DecodeAction(sortingQuery, cursorQuery string, defaultCursor *Cursor, model
 		if cursor == nil {
 			return nil, common.ErrInvalidSorting
 		}
+		if limit > 0 {
+			cursor.Limit = int(limit)
+		}
 
 	} else {
 		//Make default cursor
@@ -39,10 +42,9 @@ func DecodeAction(sortingQuery, cursorQuery string, defaultCursor *Cursor, model
 		if cursor == nil {
 			return nil, common.ErrInvalidDefaultCursor
 		}
-	}
-
-	if limit > 0 {
-		cursor.Limit = int(limit)
+		if limit > 0 {
+			cursor.Limit = int(limit)
+		}
 	}
 
 	return cursor, nil

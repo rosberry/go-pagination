@@ -73,9 +73,13 @@ func NSortNameToDBName(sortName string, model interface{}) (dbName string) {
 			return ""
 		}
 		model = f
-		dbName += name + "."
+		dbName += name + "__"
 	}
-	return strings.TrimRight(dbName, ".")
+	dbName = strings.TrimRight(dbName, "__")
+	if strings.Contains(dbName, "__") {
+		return fmt.Sprintf(`"%s"`, dbName)
+	}
+	return dbName
 }
 
 func searchField(name string, model interface{}) (field interface{}, n string) {
@@ -128,7 +132,7 @@ func fieldName(f reflect.StructField) (sortName, dbName string) {
 
 func getDbName(f reflect.StructField) (dbName string) {
 	if f.Type.Kind() == reflect.Struct {
-		return fmt.Sprintf(`"%s"`, f.Name)
+		return fmt.Sprintf(`%s`, f.Name)
 	}
 
 	field := (&schema.Schema{}).ParseField(f)

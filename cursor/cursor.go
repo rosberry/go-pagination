@@ -40,6 +40,14 @@ func New(limit int, fields ...Field) *Cursor {
 	}
 }
 
+func (c *Cursor) SetBackward() *Cursor {
+	if c == nil {
+		return nil
+	}
+	c.Backward = true
+	return c
+}
+
 //AddField to cursor
 func (c *Cursor) AddField(name string, value interface{}, order common.DirectionType) *Cursor {
 	if c == nil {
@@ -139,45 +147,15 @@ func (c *Cursor) Encode() string {
 	return base64str
 }
 
-func (c *Cursor) ToCursor(value reflect.Value) (cursor *Cursor) {
-	cursor = New(common.DefaultLimit)
+func (c *Cursor) ToCursor(value interface{}) (cursor *Cursor) {
+	cursor = New(c.Limit)
 	cursor.DB = c.DB
-	typ := value.Type()
 
-	var fieldSearch func(f Field, typ reflect.Type, indxs ...int)
-	fieldSearch = func(f Field, typ reflect.Type, indxs ...int) {
-		for i := 0; i < typ.NumField(); i++ {
-			structField := typ.Field(i)
-			if structField.Type.Kind() == reflect.Struct && structField.Anonymous {
-				fieldSearch(f, structField.Type, append(indxs, i)...)
-			}
-			name := fieldNameByDBName(structField)
-
-			var val interface{}
-			var v reflect.Value
-
-			if len(indxs) > 0 {
-				for i, indx := range indxs {
-					if i == 0 {
-						v = value.Field(indx)
-					} else {
-						v = v.Field(indx)
-					}
-
-				}
-				val = v.Field(i).Interface()
-			} else {
-				val = value.Field(i).Interface()
-			}
-
-			if f.Name == name {
-				cursor.AddField(name, val, f.Direction)
-			}
+	for _, f := range c.Fields { //f.Name = `"Author__name"`
+		val := searchFieldValue(f.Name, value)
+		if val != nil {
+			cursor.AddField(f.Name, val, f.Direction)
 		}
-	}
-
-	for _, f := range c.Fields {
-		fieldSearch(f, typ)
 	}
 	return
 }
@@ -191,4 +169,54 @@ func fieldNameByDBName(f reflect.StructField) string {
 		return field.DBName
 	}
 	return (&schema.NamingStrategy{}).ColumnName("", f.Name)
+}
+
+func searchFieldValue(name string, in interface{}) (value interface{}) {
+	//modify sortName
+	namesChain := strings.Split(strings.Trim(name, `"`), "__")
+
+	for _, n := range namesChain {
+		end, value := findFieldValueByFieldName(n, in)
+		if end {
+			return value
+		}
+		in = value
+	}
+	return nil
+}
+
+func findFieldValueByFieldName(name string, model interface{}) (end bool, value interface{}) {
+	name = strings.ToLower(name)
+
+	var typ reflect.Type
+	var val reflect.Value
+
+	if reflect.ValueOf(model).Kind() == reflect.Ptr {
+		typ = reflect.Indirect(reflect.ValueOf(model)).Type()
+		val = reflect.Indirect(reflect.ValueOf(model))
+	} else {
+		typ = reflect.ValueOf(model).Type()
+		val = reflect.ValueOf(model)
+	}
+
+	//log.Println(name, typ.Kind(), typ.Name(), typ.String())
+
+	if typ.Kind() != reflect.Struct {
+		return true, model
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		if f.Type.Kind() == reflect.Struct && f.Anonymous {
+			end, v := findFieldValueByFieldName(name, val.Field(i).Interface())
+			if end {
+				return end, v
+			}
+		}
+		if fName := fieldNameByDBName(f); name == fName {
+			return !(val.Field(i).Type().Kind() == reflect.Struct ||
+				val.Field(i).Type().Kind() == reflect.Ptr && reflect.Indirect(reflect.ValueOf(model)).Type().Kind() == reflect.Struct), val.Field(i).Interface()
+		}
+	}
+	return false, model
 }

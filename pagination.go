@@ -47,7 +47,12 @@ func New(o Options) (*Paginator, error) {
 					Direction: common.DirectionAsc,
 				},
 			},
-			Limit: common.DefaultLimit,
+			Limit: func() int {
+				if o.Limit != 0 {
+					return int(o.Limit)
+				}
+				return common.DefaultLimit
+			}(),
 		}
 	}
 	return &Paginator{Options: o}, nil
@@ -85,16 +90,16 @@ func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
 
 	object := reflect.Indirect(reflect.ValueOf(dst))
 	//first elem to prevCursor
-	nextCursor := p.cursor.ToCursor(object.Index(object.Len() - 1))
+	nextCursor := p.cursor.ToCursor(object.Index(object.Len() - 1).Interface())
 
 	//last elem to nextCursor
-	prevCursor := p.cursor.ToCursor(object.Index(0))
-	prevCursor.Backward = true
+	prevCursor := p.cursor.ToCursor(object.Index(0).Interface())
+	//prevCursor.Backward = true
 
 	//save paginationInfo to p
 	pageInfo := &PageInfo{
 		Next:      nextCursor.Encode(),
-		Prev:      prevCursor.Encode(),
+		Prev:      prevCursor.SetBackward().Encode(),
 		HasNext:   p.checkPage(tx.Session(&gorm.Session{}), nextCursor.Scope()),
 		HasPrev:   p.checkPage(tx.Session(&gorm.Session{}), prevCursor.Scope()),
 		TotalRows: int(totalRows),
