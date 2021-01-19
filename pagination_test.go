@@ -181,7 +181,7 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField("author.name", "A", common.DirectionAsc).AddField("id", 2, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField("author.name", "A", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: false, HasPrev: true, TotalRows: 7},
+					HasNext: true, HasPrev: false, TotalRows: 7},
 			},
 		},
 		//""
