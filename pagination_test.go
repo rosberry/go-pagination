@@ -184,14 +184,80 @@ func TestMainFlow(t *testing.T) {
 					HasNext: true, HasPrev: false, TotalRows: 7},
 			},
 		},
+		{
+			Name: "Field from subquery: claps (sorting query)",
+			Params: q{
+				{"sorting": `[
+					{
+						"field": "claps",
+						"direction": "desc"
+					}
+				]`,
+				},
+			},
+			Result: r{
+				IDs: []uint{6, 2},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 2, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField(`claps`, 2, common.DirectionDesc).AddField("id", 6, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: false, TotalRows: 7},
+			},
+		},
+		{
+			Name: "Field from subquery: claps (cursor query: page 2)",
+			Params: q{
+				{
+					"cursor": cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 2, common.DirectionAsc).Encode(),
+				},
+			},
+			Result: r{
+				IDs: []uint{3, 7},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 7, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7},
+			},
+		},
+		{
+			Name: "Embedded and subquery: claps (sorting query)",
+			Params: q{
+				{"sorting": `[
+					{
+						"field": "author.id",
+						"direction": "asc"
+					},
+					{
+						"field": "claps",
+						"direction": "desc"
+					},
+					{
+						"field": "id",
+						"direction": "desc"
+					}
+				]`,
+					"limit": "4",
+				},
+			},
+			Result: r{
+				IDs: []uint{6, 3, 5, 1},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(4).AddField(`"Author__id"`, 1, common.DirectionAsc).AddField(`claps`, 0, common.DirectionDesc).AddField("id", 1, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(4).AddField(`"Author__id"`, 1, common.DirectionAsc).AddField(`claps`, 2, common.DirectionDesc).AddField("id", 6, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: false, TotalRows: 7},
+			},
+		},
 		//""
 	}
 
+	runList := true
 	oneTestCase := func(ind int) {
 		if ind == -1 {
 			return
 		}
+
 		debug = true
+		runList = false
+
 		tc := tCases[ind]
 		w := performRequest(router, "GET", "/list", tc.Params)
 
@@ -222,13 +288,13 @@ func TestMainFlow(t *testing.T) {
 
 			log.Printf("%+v\n", response)
 			if ok, err := checkResult(&response, &tc.Result); !ok {
-				t.Errorf("%v) %s. Fail: %v\n", i, tc.Name, err)
+				t.Errorf("%v) %s. Fail: %v\n\n\n", i, tc.Name, err)
 			}
 		}
 	}
 
-	oneTestCase(7)
-	listTestCases(false)
+	oneTestCase(-1)
+	listTestCases(runList)
 	//assert.Equal(t, response["result"], true)
 }
 
@@ -421,8 +487,8 @@ type (
 		ItemOwnerID int    //Unical
 		ItemType    string
 
-		Claps       int64 `sql:"-" gorm:"-"` //calculate
-		FailedClaps int64 `sql:"-" gorm:"-"` //calc
+		Claps       int64 `sql:"-" gorm:"->"` //calculate
+		FailedClaps int64 `sql:"-" gorm:"->"` //calc
 
 		UserID     uint
 		Author     User `gorm:"foreignKey:UserID"`
@@ -442,11 +508,10 @@ func GetList(paginator *Paginator) (materials Materials) {
 	paginator.Options.Model = &Material{}
 
 	q := db.Table("(?) as tabl", db.Model(&Material{}).
-		/*
-			Select(`materials.*, "Author".*,
+		Select(`materials.*,
 			(select count(1) from claps where claps.material_id = materials.id and claps.success = true) as claps,
 			(select count(1) from claps where claps.material_id = materials.id and claps.success = false) as failed_claps
-			`).*/
+			`).
 		Joins("Author"))
 
 	paginator.Find(q, &materials)
