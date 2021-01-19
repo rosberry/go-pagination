@@ -85,14 +85,18 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 }
 
 func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
+	object := reflect.Indirect(reflect.ValueOf(dst))
+	if object.IsNil() || object.Len() == 0 {
+		return nil
+	}
+
 	//query for totalRow
 	totalRows := p.count(tx.Session(&gorm.Session{}))
 
-	object := reflect.Indirect(reflect.ValueOf(dst))
-	//first elem to prevCursor
+	//last elem to nextCursor
 	nextCursor := p.cursor.ToCursor(object.Index(object.Len() - 1).Interface())
 
-	//last elem to nextCursor
+	//first elem to prevCursor
 	prevCursor := p.cursor.ToCursor(object.Index(0).Interface())
 	//prevCursor.Backward = true
 
