@@ -177,10 +177,10 @@ func TestMainFlow(t *testing.T) {
 				},
 			},
 			Result: r{
-				IDs: []uint{7, 6},
+				IDs: []uint{2, 4},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(pageLimit).AddField("author.name", "A", common.DirectionAsc).AddField("id", 2, common.DirectionAsc).Encode(),
-					Prev:    cursor.New(pageLimit).AddField("author.name", "A", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).SetBackward().Encode(),
+					Next:    cursor.New(pageLimit).AddField(`"Author__name"`, "A", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField(`"Author__name"`, "A", common.DirectionAsc).AddField("id", 2, common.DirectionAsc).SetBackward().Encode(),
 					HasNext: true, HasPrev: false, TotalRows: 7},
 			},
 		},
