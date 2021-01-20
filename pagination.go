@@ -37,7 +37,6 @@ type (
 )
 
 func New(o Options) (*Paginator, error) {
-	log.Println("New paginator!")
 	if o.DefaultCursor == nil {
 		o.DefaultCursor = &cursor.Cursor{
 			Fields: []cursor.Field{
@@ -55,11 +54,16 @@ func New(o Options) (*Paginator, error) {
 			}(),
 		}
 	}
-	return &Paginator{Options: o}, nil
+	p := &Paginator{Options: o}
+	err := p.decode()
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
 }
 
 func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
-	p.decode()
 	//check what dst is pointer to slice
 	if reflect.ValueOf(dst).Kind() != reflect.Ptr {
 		return common.ErrInvalidFindDestinationNotPointer
