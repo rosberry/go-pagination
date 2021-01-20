@@ -73,8 +73,8 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 		return common.ErrInvalidCursor
 	}
 
-	//err := p.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope()).Find(dst).Error
-	err := tx.Session(&gorm.Session{}).Scopes(p.cursor.Scope()).Find(dst).Error
+	err := p.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope()).Find(dst).Error
+	//err := tx.Session(&gorm.Session{}).Scopes(p.cursor.Scope()).Find(dst).Error
 	if err != nil {
 		return err
 	}
