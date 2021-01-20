@@ -13,7 +13,7 @@ import (
 
 type (
 	Paginator struct {
-		Options
+		options  Options
 		PageInfo *PageInfo
 
 		cursor *cursor.Cursor
@@ -54,7 +54,11 @@ func New(o Options) (*Paginator, error) {
 			}(),
 		}
 	}
-	p := &Paginator{Options: o}
+	return (&Paginator{}).new(o)
+}
+
+func (p *Paginator) new(o Options) (*Paginator, error) {
+	p.options = o
 	err := p.decode()
 	if err != nil {
 		return nil, err
@@ -64,6 +68,13 @@ func New(o Options) (*Paginator, error) {
 }
 
 func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
+	if p.options.Model == nil {
+		return common.ErrEmptyModelInPaginator
+	}
+	if p.options.DB == nil {
+		return common.ErrEmptyDBInPaginator
+	}
+
 	//check what dst is pointer to slice
 	if reflect.ValueOf(dst).Kind() != reflect.Ptr {
 		return common.ErrInvalidFindDestinationNotPointer
@@ -77,7 +88,7 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 		return common.ErrInvalidCursor
 	}
 
-	err := p.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope()).Find(dst).Error
+	err := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope()).Find(dst).Error
 	//err := tx.Session(&gorm.Session{}).Scopes(p.cursor.Scope()).Find(dst).Error
 	if err != nil {
 		return err
@@ -117,10 +128,13 @@ func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
 }
 
 func (p *Paginator) decode() error {
-	sortingQuery := p.GinContext.Query("sorting")
-	cursorQuery := p.GinContext.Query("cursor")
+	if p.options.GinContext == nil {
+		return common.ErrEmptyGinContextInPaginator
+	}
+	sortingQuery := p.options.GinContext.Query("sorting")
+	cursorQuery := p.options.GinContext.Query("cursor")
 
-	cursor, err := cursor.DecodeAction(sortingQuery, cursorQuery, p.DefaultCursor, p.Model, p.Limit)
+	cursor, err := cursor.DecodeAction(sortingQuery, cursorQuery, p.options.DefaultCursor, p.options.Model, p.options.Limit)
 	if err != nil {
 		return err
 	}
@@ -131,7 +145,7 @@ func (p *Paginator) decode() error {
 }
 
 func (p *Paginator) count(tx *gorm.DB) (count int64) {
-	if err := p.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
+	if err := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
 		log.Println(err)
 		return -1
 	}
@@ -140,7 +154,7 @@ func (p *Paginator) count(tx *gorm.DB) (count int64) {
 
 func (p *Paginator) checkPage(tx *gorm.DB, scope func(*gorm.DB) *gorm.DB) (isExist bool) {
 	var count int64
-	if err := p.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(scope).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
+	if err := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(scope).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
 		log.Println(err)
 		return
 	}

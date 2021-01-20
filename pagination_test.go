@@ -419,9 +419,13 @@ func List(c *gin.Context) {
 		log.Println("!!! Set limit:", limit)
 	}
 
+	db := liveDB()
+
 	paginator, err := New(Options{
 		GinContext: c,
 		Limit:      uint(limit),
+		DB:         db,
+		Model:      &Material{},
 	})
 
 	if err != nil {
@@ -504,9 +508,6 @@ type (
 func GetList(paginator *Paginator) (materials Materials) {
 	//db := mockDB()
 	db := liveDB()
-	paginator.Options.DB = db
-	paginator.Options.Model = &Material{}
-
 	q := db.Table("(?) as tabl", db.Model(&Material{}).
 		Select(`materials.*,
 			(select count(1) from claps where claps.material_id = materials.id and claps.success = true) as claps,
