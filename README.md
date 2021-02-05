@@ -1,9 +1,12 @@
 # Pagination library
-Package go-pagination was designed to paginate simple RESTful APIs with GORM and Gin.
+
+Package go-pagination was designed to paginate simple RESTful APIs with [GORM](https://github.com/go-gorm/gorm) and [Gin](https://github.com/gin-gonic/gin).
+It uses cursor-based strategy, that avoids many of the pitfalls of "offset–limit" pagination.
 
 ## Usage
 
 #### Model
+
 ```go
 package models
 
@@ -31,6 +34,7 @@ func GetUsersList(role uint, paginator *pagination.Paginator) []User {
 ```
 
 #### Controllers
+
 ```go
 import "github.com/rosberry/go-pagination"
 
@@ -75,8 +79,10 @@ GET /items
 
 ```
 GET /items?sorting=%5B%7B%22field%22:%22id%22,%22direction%22:%22desc%22%7D%5D
+```
 
-object in sort:
+Sorting query parameters is JSON:
+```
 [
     {
         "field": "Name",
@@ -87,7 +93,6 @@ object in sort:
         "direction": "desc"
     }
 ]
-
 ```
 
 Response:
@@ -107,7 +112,6 @@ Response:
 ```
 
 Request next page:
-
 ```
 GET /items?cursor=ew2YWxU0Cn01ZSI6ogICJID
 ```
