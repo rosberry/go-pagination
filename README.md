@@ -36,6 +36,8 @@ func GetUsersList(role uint, paginator *pagination.Paginator) []User {
 #### Controllers
 
 ```go
+package controllers
+
 import "github.com/rosberry/go-pagination"
 
 type (
