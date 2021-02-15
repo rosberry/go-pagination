@@ -104,11 +104,12 @@ Response:
     "data": {
     },
     "pagination": {
-        "hasPrev": false,
-        "hasNext": true,
-        "prev": "ew2YWxU0Cn01ZSI6ogICJID=",
-        "next": "ewogICJ2YWx1ZSI6IDU0Cn0=",
-	"totalRows": 10
+		"hasPrev": false,
+		"hasNext": true,
+		"prev": "ew2YWxU0Cn01ZSI6ogICJID=",
+		"next": "ewogICJ2YWx1ZSI6IDU0Cn0=",
+		"totalRows": 10,
+		"rangeTruncated": true
     }
 }
 ```
@@ -127,6 +128,20 @@ Response (end):
 }
 ```
 
+
+### Before / After
+You can use `after`/`before` params instead of `cursor` in request
+```
+GET /items?after=e2sdw2wO0WDwwW&before=sdqqwDsdDq2Pd1
+```
+
+The `after` parameter is typically sent by the client to get the next page, while `before` is used to get the prior page.
+
+Clients MAY use the `after` and `before` parameters together on the same request. These are called “range pagination requests”, as the client is asking for all the results starting from immediately after the `after` cursor and continuing up until the `before` cursor.
+
+For range pagination requests, the server uses a `limit` to determine the maximum page size. In other words, the page size used will depend on the value of the `limit` parameter or the maximum page size.
+
+If the number of results that satisfy both the `after` and `before` constraints exceeds the used page size, the server responds with the same paginated data that it would have if the `before` parameter had not been provided. However, in this case the server MUST also add `"rangeTruncated": true` to the pagination metadata to indicate to the client that the paginated data does not contain all the results it requested.
 
 ## About
 
