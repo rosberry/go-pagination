@@ -13,15 +13,18 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
-	"github.com/rosberry/go-pagination/common"
-	"github.com/rosberry/go-pagination/cursor"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/rosberry/go-pagination/common"
+	"github.com/rosberry/go-pagination/cursor"
 )
 
-var notComparePageInfo bool = false
-var pageLimit = 2
-var debug = false
+var (
+	notComparePageInfo bool = false
+	pageLimit               = 2
+	debug                   = false
+)
 
 type (
 	q = []map[string]string
@@ -41,7 +44,8 @@ func TestMainFlow(t *testing.T) {
 	// Grab our router
 	router := SetupRouter()
 
-	var tCases = []tCase{
+	tCases := []tCase{
+		// 0
 		{
 			Name:   "Default query",
 			Params: q{},
@@ -56,6 +60,7 @@ func TestMainFlow(t *testing.T) {
 				},
 			},
 		},
+		// 1
 		{
 			Name: "Simple cursor: id desc (sorting query)",
 			Params: q{
@@ -75,6 +80,7 @@ func TestMainFlow(t *testing.T) {
 				},
 			},
 		},
+		// 2
 		{
 			Name: "Simple cursor: id desc (cursor query: page 2)",
 			Params: q{
@@ -85,9 +91,11 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionDesc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField("id", 5, common.DirectionDesc).SetBackward().Encode(),
-					HasNext: true, HasPrev: true, TotalRows: 7},
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
 			},
 		},
+		// 3
 		{
 			Name: "Simple cursor two field: comment asc, id desc (sorting query)",
 			Params: q{
@@ -107,13 +115,16 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField("comment", "A", common.DirectionAsc).AddField("id", 6, common.DirectionDesc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField("comment", "A", common.DirectionAsc).AddField("id", 7, common.DirectionDesc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
+		// 4
 		{
 			Name: "Limit > row_count",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "id",
 						"direction": "asc"
@@ -127,13 +138,16 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(10).AddField("id", 7, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(10).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: false, HasPrev: false, TotalRows: 7},
+					HasNext: false, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
+		// 5
 		{
 			Name: "Field with custom cursor name (sorting query)",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "item_id_cursor",
 						"direction": "asc"
@@ -147,9 +161,11 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(4).AddField("item_id", "59131b540b3d", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(4).AddField("item_id", "196c273ca43e", common.DirectionAsc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
+		// 6
 		{
 			Name: "Field with custom cursor name (cursor query: page 2)",
 			Params: q{
@@ -162,13 +178,16 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(4).AddField("item_id", "8e274188404e", common.DirectionAsc).AddField("id", 2, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(4).AddField("item_id", "598", common.DirectionAsc).AddField("id", 6, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: false, HasPrev: true, TotalRows: 7},
+					HasNext: false, HasPrev: true, TotalRows: 7,
+				},
 			},
 		},
+		// 7
 		{
 			Name: "Field from embedded struct: author.name (sorting query)",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "author.name",
 						"direction": "asc"
@@ -181,13 +200,16 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField(`"Author__name"`, "A", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField(`"Author__name"`, "A", common.DirectionAsc).AddField("id", 2, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
+		// 8
 		{
 			Name: "Field from subquery: claps (sorting query)",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "claps",
 						"direction": "desc"
@@ -200,9 +222,11 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 2, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField(`claps`, 2, common.DirectionDesc).AddField("id", 6, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
+		// 9
 		{
 			Name: "Field from subquery: claps (cursor query: page 2)",
 			Params: q{
@@ -215,13 +239,16 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 7, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: true, HasPrev: true, TotalRows: 7},
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
 			},
 		},
+		// 10
 		{
 			Name: "Embedded and subquery: claps (sorting query)",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "author.id",
 						"direction": "asc"
@@ -243,10 +270,114 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(4).AddField(`"Author__id"`, 1, common.DirectionAsc).AddField(`claps`, 0, common.DirectionDesc).AddField("id", 1, common.DirectionDesc).Encode(),
 					Prev:    cursor.New(4).AddField(`"Author__id"`, 1, common.DirectionAsc).AddField(`claps`, 2, common.DirectionDesc).AddField("id", 6, common.DirectionDesc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
-		//""
+		// 11
+		{
+			Name: "Simple cursor (after): id desc",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 6, common.DirectionDesc).Encode()},
+			},
+			Result: r{
+				IDs: []uint{5, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 5, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 12
+		{
+			Name: "Simple cursor (after backward): id desc",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 6, common.DirectionDesc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{5, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 5, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 13
+		{
+			Name: "Simple cursor (before): id asc",
+			Params: q{
+				{"before": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 14
+		{
+			Name: "Simple cursor (before backward): id asc",
+			Params: q{
+				{"before": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 15
+		{
+			Name: "Simple cursor (after + before): id asc, rangeTruncated:true",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 2, common.DirectionAsc).Encode()},
+				{"before": cursor.New(pageLimit).AddField("id", 6, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7, RangeTruncated: true,
+				},
+			},
+		},
+		// 16
+		{
+			Name: "Simple cursor (after + before): id asc, rangeTruncated:false",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 2, common.DirectionAsc).Encode()},
+				{"before": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7, RangeTruncated: false,
+				},
+			},
+		},
+		// 17
+		{
+			Name: "Simple cursor (after + before): bad order",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).Encode()},
+				{"before": cursor.New(pageLimit).AddField("id", 2, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs:      []uint{},
+				PageInfo: nil,
+			},
+		},
 	}
 
 	runList := true
@@ -295,7 +426,6 @@ func TestMainFlow(t *testing.T) {
 
 	oneTestCase(-1)
 	listTestCases(runList)
-	//assert.Equal(t, response["result"], true)
 }
 
 func performRequest(r http.Handler, method, path string, query []map[string]string) *httptest.ResponseRecorder {
@@ -359,7 +489,8 @@ func comparePageInfo(a, b *PageInfo) (ok bool) {
 		a.Prev != b.Prev ||
 		a.HasNext != b.HasNext ||
 		a.HasPrev != b.HasPrev ||
-		a.TotalRows != b.TotalRows {
+		a.TotalRows != b.TotalRows ||
+		a.RangeTruncated != b.RangeTruncated {
 		return false
 	}
 
@@ -387,7 +518,7 @@ func materialsToResultIDs(materials []Material) (IDs []uint) {
 }
 
 // ------------ Code example
-//main
+// main
 func SetupRouter() *gin.Engine {
 	if !debug {
 		gin.SetMode(gin.ReleaseMode)
@@ -400,7 +531,7 @@ func SetupRouter() *gin.Engine {
 	return router
 }
 
-//controller
+// controller
 type (
 	materialListResponse struct {
 		Result    bool       `json:"result"`
@@ -427,13 +558,12 @@ func List(c *gin.Context) {
 		DB:         db,
 		Model:      &Material{},
 	})
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, `{"result":false}`)
 	}
 	data := GetList(paginator)
 	if data == nil || len(data) == 0 {
-		//c.JSON(http.StatusBadRequest, cm.Error[cm.ErrItemNotFound])
+		// c.JSON(http.StatusBadRequest, cm.Error[cm.ErrItemNotFound])
 		c.JSON(http.StatusOK, materialListResponse{
 			Result:    true,
 			Materials: data,
@@ -451,7 +581,7 @@ func List(c *gin.Context) {
 	})
 }
 
-//model
+// model
 type (
 	BaseModel struct {
 		ID        uint `gorm:"primary_key"`
@@ -464,7 +594,7 @@ type (
 		DeletedAt gorm.DeletedAt `gorm:"index"`
 	}
 
-	//User is the user model of the mobile application.
+	// User is the user model of the mobile application.
 	User struct {
 		BaseModelWithSoftDelete
 		Role     uint `gorm:"not null" sql:"DEFAULT:0"`
@@ -474,7 +604,7 @@ type (
 		Photo    string
 	}
 
-	//Users list
+	// Users list
 	Users []User
 
 	Material struct {
@@ -487,12 +617,12 @@ type (
 		Status  Status
 		Comment string
 
-		ItemID      string `cursor:"item_id_cursor"` //Unical +
-		ItemOwnerID int    //Unical
+		ItemID      string `cursor:"item_id_cursor"` // Unical +
+		ItemOwnerID int    // Unical
 		ItemType    string
 
-		Claps       int64 `sql:"-" gorm:"->"` //calculate
-		FailedClaps int64 `sql:"-" gorm:"->"` //calc
+		Claps       int64 `sql:"-" gorm:"->"` // calculate
+		FailedClaps int64 `sql:"-" gorm:"->"` // calc
 
 		UserID     uint
 		Author     User `gorm:"foreignKey:UserID"`
@@ -504,9 +634,29 @@ type (
 	Status uint
 )
 
-//GetList return all materials
+// GetList return all materials
 func GetList(paginator *Paginator) (materials Materials) {
-	//db := mockDB()
+	/*
+		db, mock := mockDB()
+		rows := mock.NewRows([]string{
+			"id",
+			"deleted_at",
+			"comment",
+			"item_id",
+			"user_id",
+			"Author__id",
+			"Author__deleted_at",
+			"Author__name",
+		}).
+		AddRow(1, nil, "comment 1", 11, 1, 1, nil, "A").
+		AddRow(2, nil, "comment 2", 22, 1, 1, nil, "A").
+		AddRow(3, nil, "comment 3", 33, 2, 2, nil, "B").
+		AddRow(4, nil, "comment 4", 44, 2, 2, nil, "B").
+		AddRow(5, nil, "comment 5", 55, 3, 3, nil, "C").
+		AddRow(6, nil, "comment 6", 66, 1, 1, nil, "A").
+		AddRow(7, nil, "comment 7", 77, 4, 4, nil, "D").
+	*/
+
 	db := liveDB()
 	q := db.Table("(?) as tabl", db.Model(&Material{}).
 		Select(`materials.*,
@@ -519,19 +669,22 @@ func GetList(paginator *Paginator) (materials Materials) {
 	return
 }
 
-//DB connection
+// DB connection
 var gormConf = &gorm.Config{
 	PrepareStmt: true,
 }
 
-func mockDB() *gorm.DB {
-	sqlDB, _, _ := sqlmock.New()
+func mockDB() (*gorm.DB, sqlmock.Sqlmock) {
+	sqlDB, mock, _ := sqlmock.New()
+	defer sqlDB.Close()
+
 	db, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), gormConf)
 	if err != nil {
 		log.Println(err)
-		return nil
+		return nil, nil
 	}
-	return db
+
+	return db, mock
 }
 
 func liveDB() *gorm.DB {

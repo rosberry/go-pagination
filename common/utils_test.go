@@ -39,8 +39,8 @@ func TestNSortNameToDBName(t *testing.T) {
 			Link    string
 			Comment string
 
-			ItemID      string //Unical +
-			ItemOwnerID int    //Unical
+			ItemID      string // Unical +
+			ItemOwnerID int    // Unical
 			ItemType    string `cursor:"item_type_name"`
 
 			UserID uint
@@ -53,8 +53,8 @@ func TestNSortNameToDBName(t *testing.T) {
 		DBName   string
 	}
 
-	var testData = []TestDataStruct{
-		{"user.name", `"User".name`},
+	testData := []TestDataStruct{
+		{"user.name", `"User__name"`},
 		{"id", "id"},
 		{"comment", "comment"},
 		{"item_type_name", "item_type"},

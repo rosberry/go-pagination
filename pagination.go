@@ -4,11 +4,11 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/rosberry/go-pagination/common"
-	"github.com/rosberry/go-pagination/cursor"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
+	"github.com/rosberry/go-pagination/common"
+	"github.com/rosberry/go-pagination/cursor"
 )
 
 type (
@@ -16,7 +16,8 @@ type (
 		options  Options
 		PageInfo *PageInfo
 
-		cursor *cursor.Cursor
+		cursor           *cursor.Cursor
+		additionalCursor *cursor.Cursor
 	}
 
 	Options struct {
@@ -28,11 +29,12 @@ type (
 	}
 
 	PageInfo struct {
-		Next      string `json:"next"`
-		Prev      string `json:"prev"`
-		HasNext   bool   `json:"hasNext"`
-		HasPrev   bool   `json:"hasPrev"`
-		TotalRows int    `json:"totalRows"`
+		Next           string `json:"next"`
+		Prev           string `json:"prev"`
+		HasNext        bool   `json:"hasNext"`
+		HasPrev        bool   `json:"hasPrev"`
+		TotalRows      int    `json:"totalRows"`
+		RangeTruncated bool   `json:"rangeTruncated"`
 	}
 )
 
@@ -40,7 +42,7 @@ func New(o Options) (*Paginator, error) {
 	if o.DefaultCursor == nil {
 		o.DefaultCursor = &cursor.Cursor{
 			Fields: []cursor.Field{
-				cursor.Field{
+				{
 					Name:      "id",
 					Value:     nil,
 					Direction: common.DirectionAsc,
@@ -71,31 +73,49 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 	if p.options.Model == nil {
 		return common.ErrEmptyModelInPaginator
 	}
+
 	if p.options.DB == nil {
 		return common.ErrEmptyDBInPaginator
 	}
 
-	//check what dst is pointer to slice
+	// check what dst is pointer to slice
 	if reflect.ValueOf(dst).Kind() != reflect.Ptr {
 		return common.ErrInvalidFindDestinationNotPointer
 	}
+
 	if reflect.Indirect(reflect.ValueOf(dst)).Kind() != reflect.Slice {
 		return common.ErrInvalidFindDestinationNotSlice
 	}
 
-	//execute query
+	// execute query
 	if p.cursor == nil {
 		return common.ErrInvalidCursor
 	}
 
-	err := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope()).Find(dst).Error
-	//err := tx.Session(&gorm.Session{}).Scopes(p.cursor.Scope()).Find(dst).Error
+	var totalRowInPage int64
+	q := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope())
+	if p.additionalCursor != nil {
+		q = q.Scopes(p.additionalCursor.Scope())
+		totalRowInPage = p.count(q.Session(&gorm.Session{}).Limit(-1))
+	}
+	err := q.Find(dst).Error
 	if err != nil {
 		return err
 	}
 
-	//calc paginationinfo
+	if p.cursor.Backward {
+		common.RevertSlice(dst)
+	}
+
+	// calc paginationinfo
 	p.PageInfo = p.calcPageInfo(tx, dst)
+
+	if p.additionalCursor != nil {
+		if int64(reflect.Indirect(reflect.ValueOf(dst)).Len()) != totalRowInPage {
+			p.PageInfo.RangeTruncated = true
+		}
+	}
+
 	return nil
 }
 
@@ -105,17 +125,23 @@ func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
 		return nil
 	}
 
-	//query for totalRow
+	// query for totalRow
 	totalRows := p.count(tx.Session(&gorm.Session{}))
 
-	//last elem to nextCursor
+	// last elem to nextCursor
 	nextCursor := p.cursor.ToCursor(object.Index(object.Len() - 1).Interface())
 
-	//first elem to prevCursor
+	// first elem to prevCursor
 	prevCursor := p.cursor.ToCursor(object.Index(0).Interface())
-	//prevCursor.Backward = true
+	// prevCursor.Backward = true
 
-	//save paginationInfo to p
+	/*
+		if p.cursor.Backward {
+			nextCursor, prevCursor = prevCursor, nextCursor
+		}
+	*/
+
+	// save paginationInfo to p
 	pageInfo := &PageInfo{
 		Next:      nextCursor.Encode(),
 		Prev:      prevCursor.SetBackward().Encode(),
@@ -134,13 +160,17 @@ func (p *Paginator) decode() error {
 	sortingQuery := p.options.GinContext.Query("sorting")
 	cursorQuery := p.options.GinContext.Query("cursor")
 
-	cursor, err := cursor.DecodeAction(sortingQuery, cursorQuery, p.options.DefaultCursor, p.options.Model, p.options.Limit)
+	afterQuery := p.options.GinContext.Query("after")
+	beforeQuery := p.options.GinContext.Query("before")
+
+	cursor, additionalCursor, err := cursor.DecodeAction(sortingQuery, cursorQuery, afterQuery, beforeQuery, p.options.DefaultCursor, p.options.Model, p.options.Limit)
 	if err != nil {
 		return err
 	}
 
-	//cursor.DB = p.DB
+	// cursor.DB = p.DB
 	p.cursor = cursor
+	p.additionalCursor = additionalCursor
 	return nil
 }
 

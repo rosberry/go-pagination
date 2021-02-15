@@ -1,4 +1,7 @@
 package common
 
-//DirectionType ...
+// DirectionType ...
 type DirectionType string
+
+// After/before
+type CursorDirection int
