@@ -56,11 +56,13 @@ func New(o Options) (*Paginator, error) {
 			}(),
 		}
 	}
+
 	return (&Paginator{}).new(o)
 }
 
 func (p *Paginator) new(o Options) (*Paginator, error) {
 	p.options = o
+
 	err := p.decode()
 	if err != nil {
 		return nil, err
@@ -93,11 +95,13 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 	}
 
 	var totalRowInPage int64
+
 	q := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope())
 	if p.additionalCursor != nil {
 		q = q.Scopes(p.additionalCursor.Scope())
 		totalRowInPage = p.count(q.Session(&gorm.Session{}).Limit(-1))
 	}
+
 	err := q.Find(dst).Error
 	if err != nil {
 		return err
@@ -157,6 +161,7 @@ func (p *Paginator) decode() error {
 	if p.options.GinContext == nil {
 		return common.ErrEmptyGinContextInPaginator
 	}
+
 	sortingQuery := p.options.GinContext.Query("sorting")
 	cursorQuery := p.options.GinContext.Query("cursor")
 
@@ -171,6 +176,7 @@ func (p *Paginator) decode() error {
 	// cursor.DB = p.DB
 	p.cursor = cursor
 	p.additionalCursor = additionalCursor
+
 	return nil
 }
 
@@ -179,17 +185,21 @@ func (p *Paginator) count(tx *gorm.DB) (count int64) {
 		log.Println(err)
 		return -1
 	}
+
 	return
 }
 
 func (p *Paginator) checkPage(tx *gorm.DB, scope func(*gorm.DB) *gorm.DB) (isExist bool) {
 	var count int64
+
 	if err := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(scope).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
 		log.Println(err)
 		return
 	}
+
 	if count > 0 {
 		return true
 	}
+
 	return
 }
