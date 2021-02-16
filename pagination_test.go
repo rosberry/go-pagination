@@ -671,7 +671,7 @@ func CustomList(c *gin.Context) {
 		Model:      &Material{},
 		CustomRequest: &RequestOptions{
 			Cursor: func(c *gin.Context) (query string) {
-				cursorQuery := c.Request.Header.Get("customCursor")
+				cursorQuery := c.Query("customCursor")
 				return cursorQuery
 			},
 		},
