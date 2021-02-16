@@ -26,6 +26,15 @@ type (
 		Model         interface{}
 		Limit         uint
 		DB            *gorm.DB
+		CustomRequest *RequestOptions
+	}
+
+	RequestGetter  func(c *gin.Context) (query string)
+	RequestOptions struct {
+		Cursor  RequestGetter
+		After   RequestGetter
+		Before  RequestGetter
+		Sorting RequestGetter
 	}
 
 	PageInfo struct {
@@ -63,7 +72,7 @@ func New(o Options) (*Paginator, error) {
 func (p *Paginator) new(o Options) (*Paginator, error) {
 	p.options = o
 
-	err := p.decode()
+	err := p.decode(o.CustomRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +166,7 @@ func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
 	return pageInfo
 }
 
-func (p *Paginator) decode() error {
+func (p *Paginator) decode(customRequest *RequestOptions) error {
 	if p.options.GinContext == nil {
 		return common.ErrEmptyGinContextInPaginator
 	}
@@ -167,6 +176,22 @@ func (p *Paginator) decode() error {
 
 	afterQuery := p.options.GinContext.Query("after")
 	beforeQuery := p.options.GinContext.Query("before")
+
+	if customRequest != nil {
+		if customRequest.Sorting != nil {
+			sortingQuery = customRequest.Sorting(p.options.GinContext)
+		}
+		if customRequest.Cursor != nil {
+			cursorQuery = customRequest.Cursor(p.options.GinContext)
+		}
+
+		if customRequest.After != nil {
+			afterQuery = customRequest.After(p.options.GinContext)
+		}
+		if customRequest.Before != nil {
+			beforeQuery = customRequest.Before(p.options.GinContext)
+		}
+	}
 
 	cursor, additionalCursor, err := cursor.DecodeAction(sortingQuery, cursorQuery, afterQuery, beforeQuery, p.options.DefaultCursor, p.options.Model, p.options.Limit)
 	if err != nil {

@@ -70,7 +70,48 @@ func UsersList(c *gin.Context) {
 	})
 }
 ```
+### Customize request
+If you want to get values in a special way, you can customize the functions to find the values you need.
+You must implement functions `RequestGetter` type
+```go
+type RequestGetter  func(c *gin.Context) (query string)
+```
 
+for example
+```go
+func cursorGetter(c *gin.Context) (query string) {
+	cursorQuery := c.Request.Header.Get("customCursorFromHeader")
+	return cursorQuery
+}
+
+func sortingGetter(c *gin.Context) (query string) {
+	sortingQuery := c.Query("sort")
+	return sortingQuery
+}
+```
+and pass the functions as `Options.CustomRequest` (type `RequestOptions`) in `pagination.New()` function.
+
+```go
+paginator, err := New(Options{
+		GinContext: c,
+		Limit:      uint(limit),
+		DB:         db,
+		Model:      &Material{},
+		CustomRequest: &RequestOptions{
+			Cursor: func(c *gin.Context) (query string) {
+				cursorQuery := c.Request.Header.Get("customCursorFromHeader")
+				return cursorQuery
+			},
+			Sorting: func(c *gin.Context) (query string) {
+				sortingQuery := c.Query("sort")
+				return sortingQuery
+			},
+		},
+	})
+```
+
+* `query` for `cursor`/`after`/`before` - base64 string
+* `query` for `sorting` - json string
 
 ## Client-Server interaction
 

@@ -428,6 +428,76 @@ func TestMainFlow(t *testing.T) {
 	listTestCases(runList)
 }
 
+func TestCustomMainFlow(t *testing.T) {
+	// Grab our router
+	router := SetupRouter()
+
+	tCases := []tCase{
+		// 2
+		{
+			Name: "Simple custom cursor",
+			Params: q{
+				{"customCursor": cursor.New(pageLimit).AddField("id", 6, common.DirectionDesc).Encode()},
+			},
+			Result: r{
+				IDs: []uint{5, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 5, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+	}
+
+	runList := true
+	oneTestCase := func(ind int) {
+		if ind == -1 {
+			return
+		}
+
+		debug = true
+		runList = false
+
+		tc := tCases[ind]
+		w := performRequest(router, "GET", "/list-custom", tc.Params)
+
+		var response materialListResponse
+		err := json.Unmarshal([]byte(w.Body.String()), &response)
+		if err != nil {
+			log.Println(err)
+		}
+
+		log.Printf("%+v\n", response)
+		if ok, err := checkResult(&response, &tc.Result); !ok {
+			t.Errorf("%s. Fail: %v\n", tc.Name, err)
+		}
+	}
+
+	listTestCases := func(run bool) {
+		if !run {
+			return
+		}
+		for i, tc := range tCases {
+			w := performRequest(router, "GET", "/list-custom", tc.Params)
+
+			var response materialListResponse
+			err := json.Unmarshal([]byte(w.Body.String()), &response)
+			if err != nil {
+				log.Println(err)
+			}
+
+			log.Printf("%+v\n", response)
+			if ok, err := checkResult(&response, &tc.Result); !ok {
+				t.Errorf("%v) %s. Fail: %v\n\n\n", i, tc.Name, err)
+			}
+		}
+	}
+
+	oneTestCase(-1)
+	listTestCases(runList)
+}
+
 func performRequest(r http.Handler, method, path string, query []map[string]string) *httptest.ResponseRecorder {
 	req, _ := http.NewRequest(method, path, nil)
 
@@ -527,6 +597,7 @@ func SetupRouter() *gin.Engine {
 	router := gin.Default()
 
 	router.GET("/list", List)
+	router.GET("/list-custom", CustomList)
 
 	return router
 }
@@ -557,6 +628,53 @@ func List(c *gin.Context) {
 		Limit:      uint(limit),
 		DB:         db,
 		Model:      &Material{},
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, `{"result":false}`)
+	}
+	data := GetList(paginator)
+	if data == nil || len(data) == 0 {
+		// c.JSON(http.StatusBadRequest, cm.Error[cm.ErrItemNotFound])
+		c.JSON(http.StatusOK, materialListResponse{
+			Result:    true,
+			Materials: data,
+			Paging:    nil,
+		})
+		return
+	}
+
+	log.Printf("%#v\n", paginator.PageInfo)
+
+	c.JSON(http.StatusOK, materialListResponse{
+		Result:    true,
+		Materials: data,
+		Paging:    paginator.PageInfo,
+	})
+}
+
+func CustomList(c *gin.Context) {
+	var limit int
+	limit, _ = strconv.Atoi(c.Query("limit"))
+	defaultLimit := 2
+	if limit <= 0 {
+		limit = defaultLimit
+	} else {
+		log.Println("!!! Set limit:", limit)
+	}
+
+	db := liveDB()
+
+	paginator, err := New(Options{
+		GinContext: c,
+		Limit:      uint(limit),
+		DB:         db,
+		Model:      &Material{},
+		CustomRequest: &RequestOptions{
+			Cursor: func(c *gin.Context) (query string) {
+				cursorQuery := c.Request.Header.Get("customCursor")
+				return cursorQuery
+			},
+		},
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, `{"result":false}`)
