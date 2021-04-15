@@ -5,7 +5,9 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"time"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
 
@@ -17,7 +19,6 @@ func SortNameToDBName(sortName string, model interface{}) string {
 		typ = reflect.ValueOf(model).Type()
 	}
 
-	//log.Println(sortName, typ.Kind())
 	if typ.Kind() != reflect.Struct {
 		return ""
 	}
@@ -48,7 +49,7 @@ func columnName(field reflect.StructField) string {
 	return colName
 }
 
-//Backward of order type
+// Backward of order type
 func (dt DirectionType) Backward(ok bool) DirectionType {
 	if !ok {
 		return dt
@@ -64,7 +65,7 @@ func (dt DirectionType) Backward(ok bool) DirectionType {
 }
 
 func NSortNameToDBName(sortName string, model interface{}) (dbName string) {
-	//modify sortName
+	// modify sortName
 	namesChain := strings.Split(sortName, ".")
 
 	for _, n := range namesChain {
@@ -96,22 +97,23 @@ func searchField(name string, model interface{}) (field interface{}, n string) {
 		val = reflect.ValueOf(model)
 	}
 
-	//log.Println(name, typ.Kind(), typ.Name(), typ.String())
-
 	if typ.Kind() != reflect.Struct {
-		log.Printf("Not struct: %v\n", typ.Name())
 		return nil, ""
 	}
 
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
+
 		if f.Type.Kind() == reflect.Struct && f.Anonymous {
 			f, n := searchField(name, val.Field(i).Interface())
 			if n != "" {
 				return f, n
+			} else {
+				continue
 			}
 		}
-		if sName, dbNme := fieldName(f); name == sName {
+
+		if sName, dbNme := fieldName(f); strings.ToLower(name) == strings.ToLower(sName) {
 			return val.Field(i).Interface(), dbNme
 		}
 	}
@@ -121,6 +123,8 @@ func searchField(name string, model interface{}) (field interface{}, n string) {
 
 func fieldName(f reflect.StructField) (sortName, dbName string) {
 	if t := f.Tag.Get("cursor"); t != "" {
+		sortName = t
+	} else if t := f.Tag.Get("json"); t != "" {
 		sortName = t
 	} else {
 		sortName = strings.ToLower(f.Name)
@@ -132,7 +136,12 @@ func fieldName(f reflect.StructField) (sortName, dbName string) {
 
 func getDbName(f reflect.StructField) (dbName string) {
 	if f.Type.Kind() == reflect.Struct {
-		return fmt.Sprintf(`%s`, f.Name)
+		switch {
+		case f.Type.AssignableTo(reflect.TypeOf(time.Time{})):
+		case f.Type.AssignableTo(reflect.TypeOf(gorm.DeletedAt{})):
+		default:
+			return fmt.Sprintf(`%s`, f.Name)
+		}
 	}
 
 	field := (&schema.Schema{}).ParseField(f)

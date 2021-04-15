@@ -2,7 +2,6 @@ package pagination
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,15 +12,21 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
-	"github.com/rosberry/go-pagination/common"
-	"github.com/rosberry/go-pagination/cursor"
+	"github.com/go-testfixtures/testfixtures/v3"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/rosberry/go-pagination/common"
+	"github.com/rosberry/go-pagination/cursor"
 )
 
-var notComparePageInfo bool = false
-var pageLimit = 2
-var debug = false
+var (
+	notComparePageInfo bool = false
+	pageLimit               = 2
+	debug                   = false
+)
+
+var fixtures *testfixtures.Loader
 
 type (
 	q = []map[string]string
@@ -41,7 +46,7 @@ func TestMainFlow(t *testing.T) {
 	// Grab our router
 	router := SetupRouter()
 
-	var tCases = []tCase{
+	tCases := []tCase{
 		{
 			Name:   "Default query",
 			Params: q{},
@@ -85,7 +90,8 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionDesc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField("id", 5, common.DirectionDesc).SetBackward().Encode(),
-					HasNext: true, HasPrev: true, TotalRows: 7},
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
 			},
 		},
 		{
@@ -107,13 +113,15 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField("comment", "A", common.DirectionAsc).AddField("id", 6, common.DirectionDesc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField("comment", "A", common.DirectionAsc).AddField("id", 7, common.DirectionDesc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
 		{
 			Name: "Limit > row_count",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "id",
 						"direction": "asc"
@@ -127,13 +135,15 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(10).AddField("id", 7, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(10).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: false, HasPrev: false, TotalRows: 7},
+					HasNext: false, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
 		{
 			Name: "Field with custom cursor name (sorting query)",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "item_id_cursor",
 						"direction": "asc"
@@ -145,30 +155,33 @@ func TestMainFlow(t *testing.T) {
 			Result: r{
 				IDs: []uint{1, 5, 3, 4},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(4).AddField("item_id", "59131b540b3d", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).Encode(),
-					Prev:    cursor.New(4).AddField("item_id", "196c273ca43e", common.DirectionAsc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					Next:    cursor.New(4).AddField("item_id", "a4", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(4).AddField("item_id", "a1", common.DirectionAsc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
 		{
 			Name: "Field with custom cursor name (cursor query: page 2)",
 			Params: q{
 				{
-					"cursor": cursor.New(4).AddField("item_id", "59131b540b3d", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).Encode(),
+					"cursor": cursor.New(4).AddField("item_id", "a4", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).Encode(),
 				},
 			},
 			Result: r{
 				IDs: []uint{6, 7, 2},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(4).AddField("item_id", "8e274188404e", common.DirectionAsc).AddField("id", 2, common.DirectionAsc).Encode(),
-					Prev:    cursor.New(4).AddField("item_id", "598", common.DirectionAsc).AddField("id", 6, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: false, HasPrev: true, TotalRows: 7},
+					Next:    cursor.New(4).AddField("item_id", "c1", common.DirectionAsc).AddField("id", 2, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(4).AddField("item_id", "b1", common.DirectionAsc).AddField("id", 6, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: false, HasPrev: true, TotalRows: 7,
+				},
 			},
 		},
 		{
 			Name: "Field from embedded struct: author.name (sorting query)",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "author.name",
 						"direction": "asc"
@@ -181,13 +194,15 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField(`"Author__name"`, "A", common.DirectionAsc).AddField("id", 4, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField(`"Author__name"`, "A", common.DirectionAsc).AddField("id", 2, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
-		{
+		{ // 8
 			Name: "Field from subquery: claps (sorting query)",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "claps",
 						"direction": "desc"
@@ -196,11 +211,12 @@ func TestMainFlow(t *testing.T) {
 				},
 			},
 			Result: r{
-				IDs: []uint{6, 2},
+				IDs: []uint{6, 1},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 2, common.DirectionAsc).Encode(),
+					Next:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 1, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField(`claps`, 2, common.DirectionDesc).AddField("id", 6, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
 		{
@@ -215,13 +231,15 @@ func TestMainFlow(t *testing.T) {
 				PageInfo: &PageInfo{
 					Next:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 7, common.DirectionAsc).Encode(),
 					Prev:    cursor.New(pageLimit).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
-					HasNext: true, HasPrev: true, TotalRows: 7},
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
 			},
 		},
 		{
 			Name: "Embedded and subquery: claps (sorting query)",
 			Params: q{
-				{"sorting": `[
+				{
+					"sorting": `[
 					{
 						"field": "author.id",
 						"direction": "asc"
@@ -239,11 +257,34 @@ func TestMainFlow(t *testing.T) {
 				},
 			},
 			Result: r{
-				IDs: []uint{6, 3, 5, 1},
+				IDs: []uint{2, 4, 6, 3},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(4).AddField(`"Author__id"`, 1, common.DirectionAsc).AddField(`claps`, 0, common.DirectionDesc).AddField("id", 1, common.DirectionDesc).Encode(),
-					Prev:    cursor.New(4).AddField(`"Author__id"`, 1, common.DirectionAsc).AddField(`claps`, 2, common.DirectionDesc).AddField("id", 6, common.DirectionDesc).SetBackward().Encode(),
-					HasNext: true, HasPrev: false, TotalRows: 7},
+					Next:    cursor.New(4).AddField(`"Author__id"`, 3, common.DirectionAsc).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 3, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(4).AddField(`"Author__id"`, 1, common.DirectionAsc).AddField(`claps`, 1, common.DirectionDesc).AddField("id", 2, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
+			},
+		},
+		{
+			Name: "Time field: json",
+			Params: q{
+				{
+					"sorting": `[
+					{
+						"field": "updated_at",
+						"direction": "desc"
+					}
+				]`,
+					"limit": "4",
+				},
+			},
+			Result: r{
+				IDs: []uint{1, 2, 3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(4).AddField(`updated_at`, "2020-12-31 23:59:59+06", common.DirectionDesc).AddField("id", 3, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(4).AddField(`updated_at`, "2020-12-31 23:56:59+06", common.DirectionDesc).AddField("id", 2, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
 			},
 		},
 		//""
@@ -293,9 +334,9 @@ func TestMainFlow(t *testing.T) {
 		}
 	}
 
-	oneTestCase(-1)
+	oneTestCase(11)
 	listTestCases(runList)
-	//assert.Equal(t, response["result"], true)
+	// assert.Equal(t, response["result"], true)
 }
 
 func performRequest(r http.Handler, method, path string, query []map[string]string) *httptest.ResponseRecorder {
@@ -325,15 +366,15 @@ func checkResult(response *materialListResponse, result *r) (ok bool, err error)
 	}
 
 	if response == nil && result != nil {
-		return false, errors.New("response == nil && result != nil")
+		return false, fmt.Errorf("response == nil && result != nil")
 	}
 
 	if response != nil && result == nil {
-		return false, errors.New("response != nil && result == nil")
+		return false, fmt.Errorf("response != nil && result == nil")
 	}
 
-	if ok := comparePageInfo(response.Paging, result.PageInfo); !ok {
-		return false, fmt.Errorf("Not equals PageInfo:\nExpected: %#v\n  Actual: %#v", result.PageInfo, response.Paging)
+	if ok, err := comparePageInfo(response.Paging, result.PageInfo); !ok {
+		return false, fmt.Errorf("Not equals PageInfo:\n %#v\n", err)
 	}
 
 	if ok, mIDs := compareIDs(result.IDs, response.Materials); !ok {
@@ -343,27 +384,35 @@ func checkResult(response *materialListResponse, result *r) (ok bool, err error)
 	return true, nil
 }
 
-func comparePageInfo(a, b *PageInfo) (ok bool) {
+func comparePageInfo(a, b *PageInfo) (ok bool, err error) {
 	if notComparePageInfo {
-		return true
+		return true, nil
 	}
 	if a == nil && b == nil {
-		return true
+		return true, nil
 	}
 
-	if a == nil && b != nil || a != nil && b == nil {
-		return false
+	if a == nil && b != nil {
+		return false, fmt.Errorf("a == nil BUT b != nil")
+	}
+	if a != nil && b == nil {
+		return false, fmt.Errorf("a != nil BUT b == nil")
 	}
 
-	if a.Next != b.Next ||
-		a.Prev != b.Prev ||
-		a.HasNext != b.HasNext ||
-		a.HasPrev != b.HasPrev ||
-		a.TotalRows != b.TotalRows {
-		return false
+	switch {
+	case a.Next != b.Next:
+		return false, fmt.Errorf("Not equal Next: %v AND %v", a.Next, b.Next)
+	case a.Prev != b.Prev:
+		return false, fmt.Errorf("Not equal Prev: %v AND %v", a.Prev, b.Prev)
+	case a.HasNext != b.HasNext:
+		return false, fmt.Errorf("Not equal HasNext: %v AND %v", a.HasNext, b.HasNext)
+	case a.HasPrev != b.HasPrev:
+		return false, fmt.Errorf("Not equal HasPrev: %v AND %v", a.HasPrev, b.HasPrev)
+	case a.TotalRows != b.TotalRows:
+		return false, fmt.Errorf("Not equal TotalRows: %v AND %v", a.TotalRows, b.TotalRows)
 	}
 
-	return true
+	return true, nil
 }
 
 func compareIDs(IDs []uint, materials []Material) (ok bool, materialIDs []uint) {
@@ -387,7 +436,7 @@ func materialsToResultIDs(materials []Material) (IDs []uint) {
 }
 
 // ------------ Code example
-//main
+// main
 func SetupRouter() *gin.Engine {
 	if !debug {
 		gin.SetMode(gin.ReleaseMode)
@@ -400,7 +449,7 @@ func SetupRouter() *gin.Engine {
 	return router
 }
 
-//controller
+// controller
 type (
 	materialListResponse struct {
 		Result    bool       `json:"result"`
@@ -427,13 +476,12 @@ func List(c *gin.Context) {
 		DB:         db,
 		Model:      &Material{},
 	})
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, `{"result":false}`)
 	}
 	data := GetList(paginator)
 	if data == nil || len(data) == 0 {
-		//c.JSON(http.StatusBadRequest, cm.Error[cm.ErrItemNotFound])
+		// c.JSON(http.StatusBadRequest, cm.Error[cm.ErrItemNotFound])
 		c.JSON(http.StatusOK, materialListResponse{
 			Result:    true,
 			Materials: data,
@@ -451,7 +499,7 @@ func List(c *gin.Context) {
 	})
 }
 
-//model
+// model
 type (
 	BaseModel struct {
 		ID        uint `gorm:"primary_key"`
@@ -464,7 +512,7 @@ type (
 		DeletedAt gorm.DeletedAt `gorm:"index"`
 	}
 
-	//User is the user model of the mobile application.
+	// User is the user model of the mobile application.
 	User struct {
 		BaseModelWithSoftDelete
 		Role     uint `gorm:"not null" sql:"DEFAULT:0"`
@@ -474,25 +522,25 @@ type (
 		Photo    string
 	}
 
-	//Users list
+	// Users list
 	Users []User
 
 	Material struct {
 		ID        uint `gorm:"primary_key"`
 		CreatedAt time.Time
-		UpdatedAt time.Time
+		UpdatedAt time.Time      `json:"updated_at"`
 		DeletedAt gorm.DeletedAt `gorm:"index"`
 
 		Link    string
 		Status  Status
 		Comment string
 
-		ItemID      string `cursor:"item_id_cursor"` //Unical +
-		ItemOwnerID int    //Unical
+		ItemID      string `cursor:"item_id_cursor"` // Unical +
+		ItemOwnerID int    // Unical
 		ItemType    string
 
-		Claps       int64 `sql:"-" gorm:"->"` //calculate
-		FailedClaps int64 `sql:"-" gorm:"->"` //calc
+		Claps       int64 `sql:"-" gorm:"->"` // calculate
+		FailedClaps int64 `sql:"-" gorm:"->"` // calc
 
 		UserID     uint
 		Author     User `gorm:"foreignKey:UserID"`
@@ -502,11 +550,18 @@ type (
 	Materials []Material
 
 	Status uint
+
+	Clap struct {
+		MaterialID uint `gorm:"primary_key"`
+		ClapperID  uint `gorm:"primary_key"`
+		ClapAt     time.Time
+		Success    bool
+	}
 )
 
-//GetList return all materials
+// GetList return all materials
 func GetList(paginator *Paginator) (materials Materials) {
-	//db := mockDB()
+	// db := mockDB()
 	db := liveDB()
 	q := db.Table("(?) as tabl", db.Model(&Material{}).
 		Select(`materials.*,
@@ -519,7 +574,7 @@ func GetList(paginator *Paginator) (materials Materials) {
 	return
 }
 
-//DB connection
+// DB connection
 var gormConf = &gorm.Config{
 	PrepareStmt: true,
 }
@@ -535,15 +590,35 @@ func mockDB() *gorm.DB {
 }
 
 func liveDB() *gorm.DB {
-	connString := "host=localhost port=5432 user=postgres dbname=clapper password=123 sslmode=disable"
+	connString := "host=localhost port=5432 user=postgres dbname=pagination password=123 sslmode=disable"
 	db, err := gorm.Open(postgres.Open(connString), gormConf)
 	if err != nil {
 		log.Println(err)
 		return nil
 	}
 
+	// db.AutoMigrate(&User{}, &Material{}, &Clap{})
+
+	sqlDB, _ := db.DB()
+	fixtures, err = testfixtures.New(
+		testfixtures.DangerousSkipTestDatabaseCheck(),
+		testfixtures.Database(sqlDB),       // You database connection
+		testfixtures.Dialect("postgres"),   // Available: "postgresql", "timescaledb", "mysql", "mariadb", "sqlite" and "sqlserver"
+		testfixtures.Directory("testdata"), // the directory containing the YAML files
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	prepareTestDatabase()
+
 	if debug {
 		return db.Debug()
 	}
 	return db
+}
+
+func prepareTestDatabase() {
+	if err := fixtures.Load(); err != nil {
+		log.Printf("prepareTestDatabase: %v", err)
+	}
 }
