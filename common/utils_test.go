@@ -25,26 +25,31 @@ func TestNSortNameToDBName(t *testing.T) {
 
 		User struct {
 			BaseModel
+			// ID        uint           `gorm:"primary_key"`
+			// CreatedAt time.Time      `cursor:"createdAt"`
+			// UpdatedAt time.Time      `json:"updated_at"`
+			// DeletedAt gorm.DeletedAt `gorm:"index"`
+
 			Name     string
 			Role     uint `cursor:"roleID"`
 			Clappers []Clapper
 		}
 
 		Material struct {
-			ID        uint `gorm:"primary_key"`
-			CreatedAt time.Time
-			UpdatedAt time.Time
+			UserID uint
+			User   User `gorm:"foreignKey:UserID"`
+
+			ID        uint           `gorm:"primary_key"`
+			CreatedAt time.Time      `cursor:"createdAt"`
+			UpdatedAt time.Time      `json:"updated_at"`
 			DeletedAt gorm.DeletedAt `gorm:"index"`
 
 			Link    string
 			Comment string
 
-			ItemID      string //Unical +
-			ItemOwnerID int    //Unical
+			ItemID      string // Unical +
+			ItemOwnerID int    // Unical
 			ItemType    string `cursor:"item_type_name"`
-
-			UserID uint
-			User   User `gorm:"foreignKey:UserID"`
 		}
 	)
 
@@ -53,11 +58,14 @@ func TestNSortNameToDBName(t *testing.T) {
 		DBName   string
 	}
 
-	var testData = []TestDataStruct{
-		{"user.name", `"User".name`},
+	testData := []TestDataStruct{
+		{"user.name", `"User__name"`}, // TODO: Panica!
 		{"id", "id"},
 		{"comment", "comment"},
 		{"item_type_name", "item_type"},
+		{"updated_at", "updated_at"},
+		{"createdAt", "created_at"},
+		{"DeletedAt", "deleted_at"},
 	}
 
 	for i, td := range testData {
