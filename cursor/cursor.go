@@ -7,15 +7,16 @@ import (
 	"log"
 	"reflect"
 	"strings"
-
-	"github.com/rosberry/go-pagination/common"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
+
+	"github.com/rosberry/go-pagination/common"
 )
 
 type (
-	//Cursor struct
+	// Cursor struct
 	Cursor struct {
 		Fields   []Field `json:"fields"`
 		Limit    int     `json:"limit"`
@@ -24,7 +25,7 @@ type (
 		DB *gorm.DB `json:"-"`
 	}
 
-	//Field struct
+	// Field struct
 	Field struct {
 		Name      string               `json:"name"`
 		Value     interface{}          `json:"value"`
@@ -32,7 +33,7 @@ type (
 	}
 )
 
-//New Cursor
+// New Cursor
 func New(limit int, fields ...Field) *Cursor {
 	return &Cursor{
 		Fields: fields,
@@ -48,7 +49,7 @@ func (c *Cursor) SetBackward() *Cursor {
 	return c
 }
 
-//AddField to cursor
+// AddField to cursor
 func (c *Cursor) AddField(name string, value interface{}, order common.DirectionType) *Cursor {
 	if c == nil {
 		return nil
@@ -70,24 +71,24 @@ func (c *Cursor) AddField(name string, value interface{}, order common.Direction
 	return c
 }
 
-//Scope convert Cursor to gorm.DB query
+// Scope convert Cursor to gorm.DB query
 func (c *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		return c.order(c.where(db))
 	}
 }
 
-//where convertation
+// where convertation
 func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 	q := db
 	var qList string
 	val := make([]interface{}, 0)
-	//Make cursor query
+	// Make cursor query
 	for i, f := range c.Fields {
 		if f.Value == nil {
 			continue
 		}
-		//query := "("
+		// query := "("
 		query := ""
 		for j := 0; j <= i; j++ {
 			if j != i {
@@ -116,7 +117,7 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 	return q
 }
 
-//order convertation
+// order convertation
 func (c *Cursor) order(query *gorm.DB) *gorm.DB {
 	for _, f := range c.Fields {
 		order := fmt.Sprintf("%s %s", f.Name, f.Direction.Backward(c.Backward))
@@ -130,12 +131,12 @@ func (c *Cursor) order(query *gorm.DB) *gorm.DB {
 	return query
 }
 
-//GroupConditions for GORM v2
+// GroupConditions for GORM v2
 func (c *Cursor) GroupConditions(db *gorm.DB) *gorm.DB {
 	return c.order(c.where(db))
 }
 
-//Encode Cursor to base64 string
+// Encode Cursor to base64 string
 func (c *Cursor) Encode() string {
 	raw, err := json.Marshal(c)
 	if err != nil {
@@ -151,10 +152,12 @@ func (c *Cursor) ToCursor(value interface{}) (cursor *Cursor) {
 	cursor = New(c.Limit)
 	cursor.DB = c.DB
 
-	for _, f := range c.Fields { //f.Name = `"Author__name"`
+	for _, f := range c.Fields { // f.Name = `"Author__name"`
 		val := searchFieldValue(f.Name, value)
 		if val != nil {
 			cursor.AddField(f.Name, val, f.Direction)
+		} else {
+			log.Print("!!!")
 		}
 	}
 	return
@@ -172,7 +175,7 @@ func fieldNameByDBName(f reflect.StructField) string {
 }
 
 func searchFieldValue(name string, in interface{}) (value interface{}) {
-	//modify sortName
+	// modify sortName
 	namesChain := strings.Split(strings.Trim(name, `"`), "__")
 
 	for _, n := range namesChain {
@@ -199,8 +202,6 @@ func findFieldValueByFieldName(name string, model interface{}) (end bool, value 
 		val = reflect.ValueOf(model)
 	}
 
-	//log.Println(name, typ.Kind(), typ.Name(), typ.String())
-
 	if typ.Kind() != reflect.Struct {
 		return true, model
 	}
@@ -214,8 +215,18 @@ func findFieldValueByFieldName(name string, model interface{}) (end bool, value 
 			}
 		}
 		if fName := fieldNameByDBName(f); name == fName {
-			return !(val.Field(i).Type().Kind() == reflect.Struct ||
-				val.Field(i).Type().Kind() == reflect.Ptr && reflect.Indirect(reflect.ValueOf(model)).Type().Kind() == reflect.Struct), val.Field(i).Interface()
+			fTyp := f.Type
+
+			end = true
+			if fTyp.Kind() == reflect.Struct {
+				switch {
+				case fTyp.AssignableTo(reflect.TypeOf(time.Time{})):
+				case fTyp.AssignableTo(reflect.TypeOf(gorm.DeletedAt{})):
+				default:
+					end = false
+				}
+			}
+			return end, val.Field(i).Interface()
 		}
 	}
 	return false, model

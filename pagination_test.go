@@ -281,8 +281,30 @@ func TestMainFlow(t *testing.T) {
 			Result: r{
 				IDs: []uint{1, 2, 3, 4},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(4).AddField(`updated_at`, "2020-12-31 23:59:59+06", common.DirectionDesc).AddField("id", 3, common.DirectionDesc).Encode(),
-					Prev:    cursor.New(4).AddField(`updated_at`, "2020-12-31 23:56:59+06", common.DirectionDesc).AddField("id", 2, common.DirectionDesc).SetBackward().Encode(),
+					Next:    cursor.New(4).AddField(`updated_at`, "2020-12-31T23:56:59+06:00", common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(4).AddField(`updated_at`, "2020-12-31T23:59:59+06:00", common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: false, TotalRows: 7,
+				},
+			},
+		},
+		{
+			Name: "Time field pointer: json",
+			Params: q{
+				{
+					"sorting": `[
+					{
+						"field": "PublicTime",
+						"direction": "desc"
+					}
+				]`,
+					"limit": "4",
+				},
+			},
+			Result: r{
+				IDs: []uint{1, 2, 3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(4).AddField(`public_at`, "2020-12-31T23:56:59+06:00", common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(4).AddField(`public_at`, "2020-12-31T23:59:59+06:00", common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
 					HasNext: true, HasPrev: false, TotalRows: 7,
 				},
 			},
@@ -334,7 +356,7 @@ func TestMainFlow(t *testing.T) {
 		}
 	}
 
-	oneTestCase(11)
+	oneTestCase(12)
 	listTestCases(runList)
 	// assert.Equal(t, response["result"], true)
 }
@@ -530,6 +552,7 @@ type (
 		CreatedAt time.Time
 		UpdatedAt time.Time      `json:"updated_at"`
 		DeletedAt gorm.DeletedAt `gorm:"index"`
+		PublicAt  *time.Time     `json:"PublicTime"`
 
 		Link    string
 		Status  Status
@@ -597,7 +620,7 @@ func liveDB() *gorm.DB {
 		return nil
 	}
 
-	// db.AutoMigrate(&User{}, &Material{}, &Clap{})
+	db.AutoMigrate(&User{}, &Material{}, &Clap{})
 
 	sqlDB, _ := db.DB()
 	fixtures, err = testfixtures.New(
