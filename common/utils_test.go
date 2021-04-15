@@ -43,6 +43,7 @@ func TestNSortNameToDBName(t *testing.T) {
 			CreatedAt time.Time      `cursor:"createdAt"`
 			UpdatedAt time.Time      `json:"updated_at"`
 			DeletedAt gorm.DeletedAt `gorm:"index"`
+			PublicAt  *time.Time     `json:"PublicTime"`
 
 			Link    string
 			Comment string
@@ -66,6 +67,7 @@ func TestNSortNameToDBName(t *testing.T) {
 		{"updated_at", "updated_at"},
 		{"createdAt", "created_at"},
 		{"DeletedAt", "deleted_at"},
+		{"PublicTime", "public_at"},
 	}
 
 	for i, td := range testData {
