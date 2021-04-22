@@ -4,11 +4,11 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/rosberry/go-pagination/common"
-	"github.com/rosberry/go-pagination/cursor"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
+	"github.com/rosberry/go-pagination/common"
+	"github.com/rosberry/go-pagination/cursor"
 )
 
 type (
@@ -40,7 +40,7 @@ func New(o Options) (*Paginator, error) {
 	if o.DefaultCursor == nil {
 		o.DefaultCursor = &cursor.Cursor{
 			Fields: []cursor.Field{
-				cursor.Field{
+				{
 					Name:      "id",
 					Value:     nil,
 					Direction: common.DirectionAsc,
@@ -75,7 +75,7 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 		return common.ErrEmptyDBInPaginator
 	}
 
-	//check what dst is pointer to slice
+	// check what dst is pointer to slice
 	if reflect.ValueOf(dst).Kind() != reflect.Ptr {
 		return common.ErrInvalidFindDestinationNotPointer
 	}
@@ -83,18 +83,23 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 		return common.ErrInvalidFindDestinationNotSlice
 	}
 
-	//execute query
+	// execute query
 	if p.cursor == nil {
 		return common.ErrInvalidCursor
 	}
 
-	err := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope()).Find(dst).Error
-	//err := tx.Session(&gorm.Session{}).Scopes(p.cursor.Scope()).Find(dst).Error
+	q := p.options.DB
+	for k := range tx.Statement.Preloads {
+		q = q.Preload(k)
+	}
+
+	err := q.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope()).Find(dst).Error
+	// err := tx.Session(&gorm.Session{}).Scopes(p.cursor.Scope()).Find(dst).Error
 	if err != nil {
 		return err
 	}
 
-	//calc paginationinfo
+	// calc paginationinfo
 	p.PageInfo = p.calcPageInfo(tx, dst)
 	return nil
 }
@@ -105,17 +110,17 @@ func (p *Paginator) calcPageInfo(tx *gorm.DB, dst interface{}) *PageInfo {
 		return nil
 	}
 
-	//query for totalRow
+	// query for totalRow
 	totalRows := p.count(tx.Session(&gorm.Session{}))
 
-	//last elem to nextCursor
+	// last elem to nextCursor
 	nextCursor := p.cursor.ToCursor(object.Index(object.Len() - 1).Interface())
 
-	//first elem to prevCursor
+	// first elem to prevCursor
 	prevCursor := p.cursor.ToCursor(object.Index(0).Interface())
-	//prevCursor.Backward = true
+	// prevCursor.Backward = true
 
-	//save paginationInfo to p
+	// save paginationInfo to p
 	pageInfo := &PageInfo{
 		Next:      nextCursor.Encode(),
 		Prev:      prevCursor.SetBackward().Encode(),
@@ -139,7 +144,7 @@ func (p *Paginator) decode() error {
 		return err
 	}
 
-	//cursor.DB = p.DB
+	// cursor.DB = p.DB
 	p.cursor = cursor
 	return nil
 }
