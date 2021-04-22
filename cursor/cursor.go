@@ -45,7 +45,9 @@ func (c *Cursor) SetBackward() *Cursor {
 	if c == nil {
 		return nil
 	}
+
 	c.Backward = true
+
 	return c
 }
 
@@ -54,10 +56,12 @@ func (c *Cursor) AddField(name string, value interface{}, order common.Direction
 	if c == nil {
 		return nil
 	}
+
 	for _, f := range c.Fields {
 		if f.Name == name {
 			f.Value = value
 			f.Direction = order
+
 			return c
 		}
 	}
@@ -81,22 +85,26 @@ func (c *Cursor) Scope() func(db *gorm.DB) *gorm.DB {
 // where convertation
 func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 	q := db
+
 	var qList string
+
 	val := make([]interface{}, 0)
 	// Make cursor query
 	for i, f := range c.Fields {
 		if f.Value == nil {
 			continue
 		}
-		// query := "("
 		query := ""
+
 		for j := 0; j <= i; j++ {
 			if j != i {
 				s := fmt.Sprintf("%v %v ?", c.Fields[j].Name, "=")
 				val = append(val, c.Fields[j].Value)
+
 				if j != 0 {
 					query += " AND "
 				}
+
 				query += s
 			} else {
 				s := fmt.Sprintf("%v %v ?", c.Fields[j].Name, common.CompareTerms[c.Fields[j].Direction.Backward(c.Backward)])
@@ -110,6 +118,7 @@ func (c *Cursor) where(db *gorm.DB) *gorm.DB {
 
 		qList += fmt.Sprintf(" OR (%v)", query)
 	}
+
 	qList = strings.Replace(qList, " OR (", "(", 1)
 	q = q.Where(qList, val...)
 
@@ -145,6 +154,7 @@ func (c *Cursor) Encode() string {
 	}
 
 	base64str := base64.StdEncoding.EncodeToString(raw)
+
 	return base64str
 }
 
@@ -160,6 +170,7 @@ func (c *Cursor) ToCursor(value interface{}) (cursor *Cursor) {
 			log.Print("!!!")
 		}
 	}
+
 	return
 }
 
@@ -167,10 +178,12 @@ func fieldNameByDBName(f reflect.StructField) string {
 	if f.Anonymous {
 		return f.Name
 	}
+
 	field := (&schema.Schema{}).ParseField(f)
 	if field.DBName != "" {
 		return field.DBName
 	}
+
 	return (&schema.NamingStrategy{}).ColumnName("", f.Name)
 }
 
@@ -183,16 +196,20 @@ func searchFieldValue(name string, in interface{}) (value interface{}) {
 		if end {
 			return value
 		}
+
 		in = value
 	}
+
 	return nil
 }
 
 func findFieldValueByFieldName(name string, model interface{}) (end bool, value interface{}) {
 	name = strings.ToLower(name)
 
-	var typ reflect.Type
-	var val reflect.Value
+	var (
+		typ reflect.Type
+		val reflect.Value
+	)
 
 	if reflect.ValueOf(model).Kind() == reflect.Ptr {
 		typ = reflect.Indirect(reflect.ValueOf(model)).Type()
@@ -214,6 +231,7 @@ func findFieldValueByFieldName(name string, model interface{}) (end bool, value 
 				return end, v
 			}
 		}
+
 		if fName := fieldNameByDBName(f); name == fName {
 			fTyp := f.Type
 
@@ -229,5 +247,6 @@ func findFieldValueByFieldName(name string, model interface{}) (end bool, value 
 			return end, val.Field(i).Interface()
 		}
 	}
+
 	return false, model
 }

@@ -32,6 +32,7 @@ func SortNameToDBName(sortName string, model interface{}) string {
 			if field.DBName != "" {
 				return field.DBName
 			}
+
 			return (&schema.NamingStrategy{}).ColumnName("", field.Name)
 		}
 	}
@@ -41,11 +42,14 @@ func SortNameToDBName(sortName string, model interface{}) string {
 
 func columnName(field reflect.StructField) string {
 	tags := field.Tag
+
 	var colName string
+
 	colName = tags.Get("cursor")
 	if colName == "" {
 		colName = (&schema.NamingStrategy{}).ColumnName("", field.Name)
 	}
+
 	return colName
 }
 
@@ -54,6 +58,7 @@ func (dt DirectionType) Backward(ok bool) DirectionType {
 	if !ok {
 		return dt
 	}
+
 	switch dt {
 	case DirectionDesc:
 		return DirectionAsc
@@ -73,21 +78,26 @@ func NSortNameToDBName(sortName string, model interface{}) (dbName string) {
 		if f == nil {
 			return ""
 		}
+
 		model = f
 		dbName += name + "__"
 	}
-	dbName = strings.TrimRight(dbName, "__")
+
+	dbName = strings.TrimRight(dbName, "_")
 	if strings.Contains(dbName, "__") {
 		return fmt.Sprintf(`"%s"`, dbName)
 	}
+
 	return dbName
 }
 
 func searchField(name string, model interface{}) (field interface{}, n string) {
 	name = strings.ToLower(name)
 
-	var typ reflect.Type
-	var val reflect.Value
+	var (
+		typ reflect.Type
+		val reflect.Value
+	)
 
 	if reflect.ValueOf(model).Kind() == reflect.Ptr {
 		typ = reflect.Indirect(reflect.ValueOf(model)).Type()
@@ -118,6 +128,7 @@ func searchField(name string, model interface{}) (field interface{}, n string) {
 		}
 	}
 	log.Printf("Not found field %s in struct %v\n", name, typ.Name())
+
 	return nil, ""
 }
 
@@ -129,12 +140,13 @@ func fieldName(f reflect.StructField) (sortName, dbName string) {
 	} else {
 		sortName = strings.ToLower(f.Name)
 	}
-	dbName = getDbName(f)
+
+	dbName = getDBName(f)
 
 	return
 }
 
-func getDbName(f reflect.StructField) (dbName string) {
+func getDBName(f reflect.StructField) (dbName string) {
 	if f.Type.Kind() == reflect.Struct {
 		switch {
 		case f.Type.AssignableTo(reflect.TypeOf(time.Time{})):
@@ -145,10 +157,21 @@ func getDbName(f reflect.StructField) (dbName string) {
 	}
 
 	field := (&schema.Schema{}).ParseField(f)
-	if field != nil && field.DBName != "" {
-		dbName = field.DBName
-	}
 	dbName = (&schema.NamingStrategy{}).ColumnName("", field.Name)
 
-	return
+	return dbName
+}
+
+func RevertSlice(dst interface{}) {
+	object := reflect.Indirect(reflect.ValueOf(dst))
+	if object.IsNil() || object.Len() == 0 {
+		return
+	}
+
+	n := object.Len()
+	swap := reflect.Swapper(object.Interface())
+
+	for i, j := 0, n-1; i < j; i, j = i+1, j-1 {
+		swap(i, j)
+	}
 }

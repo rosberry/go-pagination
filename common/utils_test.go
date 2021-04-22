@@ -60,7 +60,7 @@ func TestNSortNameToDBName(t *testing.T) {
 	}
 
 	testData := []TestDataStruct{
-		{"user.name", `"User__name"`}, // TODO: Panica!
+		{"user.name", `"User__name"`},
 		{"id", "id"},
 		{"comment", "comment"},
 		{"item_type_name", "item_type"},

@@ -31,15 +31,18 @@ func (srt *sorting) toCursor(model interface{}) *Cursor {
 		if !ok {
 			direction = common.DirectionAsc
 		}
+
 		fieldName := common.NSortNameToDBName(e.Field, model)
 		if fieldName == "" {
 			return nil
 		}
+
 		cursor.AddField(fieldName, nil, direction)
 	}
 
-	//check and add id field
+	// check and add id field
 	var idExist bool
+
 	for _, f := range cursor.Fields {
 		if f.Name == "id" {
 			idExist = true

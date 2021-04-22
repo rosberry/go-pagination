@@ -18,3 +18,9 @@ var DirectionByString map[string]DirectionType = map[string]DirectionType{
 	"asc":  DirectionAsc,
 	"desc": DirectionDesc,
 }
+
+const (
+	CursorBasic CursorDirection = iota
+	CursorAfter
+	CursorBefore
+)

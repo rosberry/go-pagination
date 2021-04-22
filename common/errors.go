@@ -3,13 +3,13 @@ package common
 import "errors"
 
 var (
-	ErrInvalidCursor                    = errors.New("Invalid cursor")
-	ErrInvalidSorting                   = errors.New("Invalid sorting")
-	ErrInvalidDefaultCursor             = errors.New("Invalid default cursor")
-	ErrCursorAndSortingTogether         = errors.New("You cannot use cursor and sorting at the same time")
+	ErrInvalidCursor                    = errors.New("invalid cursor")
+	ErrInvalidSorting                   = errors.New("invalid sorting")
+	ErrInvalidDefaultCursor             = errors.New("invalid default cursor")
+	ErrCursorAndSortingTogether         = errors.New("you cannot use cursor and sorting at the same time")
 	ErrInvalidFindDestinationNotPointer = errors.New("dst is not pointer to slice")
 	ErrInvalidFindDestinationNotSlice   = errors.New("pointer in dst not to slice")
-	ErrEmptyModelInPaginator            = errors.New("Paginator.Model is nil")
-	ErrEmptyDBInPaginator               = errors.New("Paginator.DB is nil")
-	ErrEmptyGinContextInPaginator       = errors.New("Paginator.GinContext is nil")
+	ErrEmptyModelInPaginator            = errors.New("paginator.Model is nil")
+	ErrEmptyDBInPaginator               = errors.New("paginator.DB is nil")
+	ErrEmptyGinContextInPaginator       = errors.New("paginator.GinContext is nil")
 )
