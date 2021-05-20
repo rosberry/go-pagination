@@ -276,6 +276,7 @@ func TestMainFlow(t *testing.T) {
 				},
 			},
 		},
+		// 11
 		{
 			Name: "Time field: json",
 			Params: q{
@@ -298,6 +299,7 @@ func TestMainFlow(t *testing.T) {
 				},
 			},
 		},
+		// 12
 		{
 			Name: "Time field pointer: json",
 			Params: q{
@@ -318,6 +320,110 @@ func TestMainFlow(t *testing.T) {
 					Prev:    cursor.New(4).AddField(`public_at`, "2020-12-31T23:59:59+06:00", common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
 					HasNext: true, HasPrev: false, TotalRows: 7,
 				},
+			},
+		},
+		// 13
+		{
+			Name: "Simple cursor (after): id desc",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 6, common.DirectionDesc).Encode()},
+			},
+			Result: r{
+				IDs: []uint{5, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 5, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 14
+		{
+			Name: "Simple cursor (after backward): id desc",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 6, common.DirectionDesc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{5, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 5, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 15
+		{
+			Name: "Simple cursor (before): id asc",
+			Params: q{
+				{"before": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 16
+		{
+			Name: "Simple cursor (before backward): id asc",
+			Params: q{
+				{"before": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 17
+		{
+			Name: "Simple cursor (after + before): id asc, rangeTruncated:true",
+			Params: q{
+				{"after": cursor.New(2).AddField("id", 2, common.DirectionAsc).Encode()},
+				{"before": cursor.New(2).AddField("id", 6, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(2).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(2).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7, RangeTruncated: true,
+				},
+			},
+		},
+		// 18
+		{
+			Name: "Simple cursor (after + before): id asc, rangeTruncated:false",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 2, common.DirectionAsc).Encode()},
+				{"before": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7, RangeTruncated: false,
+				},
+			},
+		},
+		// 19
+		{
+			Name: "Simple cursor (after + before): bad order",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).Encode()},
+				{"before": cursor.New(pageLimit).AddField("id", 2, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs:      []uint{},
+				PageInfo: nil,
 			},
 		},
 	}
@@ -366,7 +472,7 @@ func TestMainFlow(t *testing.T) {
 		}
 	}
 
-	oneTestCase(-1)
+	oneTestCase(17)
 	listTestCases(runList)
 }
 
