@@ -472,7 +472,7 @@ func TestMainFlow(t *testing.T) {
 		}
 	}
 
-	oneTestCase(17)
+	oneTestCase(-1)
 	listTestCases(runList)
 }
 

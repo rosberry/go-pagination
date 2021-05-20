@@ -106,9 +106,6 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 	var totalRowInPage int64
 
 	q := p.options.DB
-	for k := range tx.Statement.Preloads {
-		q = q.Preload(k)
-	}
 
 	q = q.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(p.cursor.Scope())
 	if p.additionalCursor != nil {
@@ -116,6 +113,9 @@ func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 		totalRowInPage = p.count(q.Session(&gorm.Session{}).Limit(-1))
 	}
 
+	for k := range tx.Statement.Preloads {
+		q = q.Preload(k)
+	}
 	err := q.Find(dst).Error
 	// -------
 	if err != nil {
@@ -206,6 +206,9 @@ func (p *Paginator) decode(customRequest *RequestOptions) error {
 }
 
 func (p *Paginator) count(tx *gorm.DB) (count int64) {
+	if p.options.DB.Statement.Schema == nil {
+		log.Print("Schema is nil:")
+	}
 	if err := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
 		log.Println(err)
 		return -1
