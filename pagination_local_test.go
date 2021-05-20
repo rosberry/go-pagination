@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -863,7 +864,12 @@ func mockDB() (*gorm.DB, sqlmock.Sqlmock) {
 }
 
 func liveDB() *gorm.DB {
-	connString := "host=localhost port=5432 user=postgres dbname=pagination password=123 sslmode=disable"
+	connString := os.Getenv("DB_CONNECT_STRING") //	"host=localhost port=5432 user=postgres dbname=pagination password=123 sslmode=disable"
+	if connString == "" {
+		log.Print("Use DB_CONNECT_STRING env for setup db connection string")
+		os.Exit(1)
+	}
+
 	db, err := gorm.Open(postgres.Open(connString), gormConf)
 	if err != nil {
 		log.Println(err)
