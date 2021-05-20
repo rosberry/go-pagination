@@ -293,8 +293,8 @@ func TestMainFlow(t *testing.T) {
 			Result: r{
 				IDs: []uint{1, 2, 3, 4},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(4).AddField(`updated_at`, "2020-12-31T23:56:59+06:00", common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
-					Prev:    cursor.New(4).AddField(`updated_at`, "2020-12-31T23:59:59+06:00", common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
+					Next:    cursor.New(4).AddField(`updated_at`, convertTime("2020-12-31T23:56:59Z"), common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(4).AddField(`updated_at`, convertTime("2020-12-31T23:59:59Z"), common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
 					HasNext: true, HasPrev: false, TotalRows: 7,
 				},
 			},
@@ -316,8 +316,8 @@ func TestMainFlow(t *testing.T) {
 			Result: r{
 				IDs: []uint{1, 2, 3, 4},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(4).AddField(`public_at`, "2020-12-31T23:56:59+06:00", common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
-					Prev:    cursor.New(4).AddField(`public_at`, "2020-12-31T23:59:59+06:00", common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
+					Next:    cursor.New(4).AddField(`public_at`, convertTime("2020-12-31T23:56:59Z"), common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(4).AddField(`public_at`, convertTime("2020-12-31T23:59:59Z"), common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
 					HasNext: true, HasPrev: false, TotalRows: 7,
 				},
 			},
@@ -640,6 +640,18 @@ func materialsToResultIDs(materials []Material) (IDs []uint) {
 	}
 
 	return IDs
+}
+
+func convertTime(t string) string {
+	//"2020-12-31T23:56:59Z"
+	format := "2006-01-02T15:04:05Z07:00"
+	tParsed, err := time.Parse(format, t)
+	if err != nil {
+		log.Print(err)
+		return t
+	}
+
+	return tParsed.Local().Format(format)
 }
 
 // ------------ Code example
