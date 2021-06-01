@@ -1,24 +1,24 @@
 - material_id: 6
   clapper_id: 1
-  clap_at: 2020-12-31 23:59:59
+  clap_at: 2020-12-31 23:59:59+00
   success: true
 - material_id: 6
   clapper_id: 2
-  clap_at: 2020-12-31 23:59:59
+  clap_at: 2020-12-31 23:59:59+00
   success: true
 - material_id: 2
   clapper_id: 1
-  clap_at: 2020-12-31 23:59:59
+  clap_at: 2020-12-31 23:59:59+00
   success: true
 - material_id: 7
   clapper_id: 1
-  clap_at: 2020-12-31 23:59:59
+  clap_at: 2020-12-31 23:59:59+00
   success: true
 - material_id: 3
   clapper_id: 1
-  clap_at: 2020-12-31 23:59:59
+  clap_at: 2020-12-31 23:59:59+00
   success: true
 - material_id: 1
   clapper_id: 1
-  clap_at: 2020-12-31 23:59:59
+  clap_at: 2020-12-31 23:59:59+00
   success: true

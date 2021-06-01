@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -276,6 +277,7 @@ func TestMainFlow(t *testing.T) {
 				},
 			},
 		},
+		// 11
 		{
 			Name: "Time field: json",
 			Params: q{
@@ -292,12 +294,13 @@ func TestMainFlow(t *testing.T) {
 			Result: r{
 				IDs: []uint{1, 2, 3, 4},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(4).AddField(`updated_at`, "2020-12-31T23:56:59+06:00", common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
-					Prev:    cursor.New(4).AddField(`updated_at`, "2020-12-31T23:59:59+06:00", common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
+					Next:    cursor.New(4).AddField(`updated_at`, convertTime("2020-12-31T23:56:59Z"), common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(4).AddField(`updated_at`, convertTime("2020-12-31T23:59:59Z"), common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
 					HasNext: true, HasPrev: false, TotalRows: 7,
 				},
 			},
 		},
+		// 12
 		{
 			Name: "Time field pointer: json",
 			Params: q{
@@ -314,10 +317,114 @@ func TestMainFlow(t *testing.T) {
 			Result: r{
 				IDs: []uint{1, 2, 3, 4},
 				PageInfo: &PageInfo{
-					Next:    cursor.New(4).AddField(`public_at`, "2020-12-31T23:56:59+06:00", common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
-					Prev:    cursor.New(4).AddField(`public_at`, "2020-12-31T23:59:59+06:00", common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
+					Next:    cursor.New(4).AddField(`public_at`, convertTime("2020-12-31T23:56:59Z"), common.DirectionDesc).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(4).AddField(`public_at`, convertTime("2020-12-31T23:59:59Z"), common.DirectionDesc).AddField("id", 1, common.DirectionAsc).SetBackward().Encode(),
 					HasNext: true, HasPrev: false, TotalRows: 7,
 				},
+			},
+		},
+		// 13
+		{
+			Name: "Simple cursor (after): id desc",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 6, common.DirectionDesc).Encode()},
+			},
+			Result: r{
+				IDs: []uint{5, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 5, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 14
+		{
+			Name: "Simple cursor (after backward): id desc",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 6, common.DirectionDesc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{5, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionDesc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 5, common.DirectionDesc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 15
+		{
+			Name: "Simple cursor (before): id asc",
+			Params: q{
+				{"before": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 16
+		{
+			Name: "Simple cursor (before backward): id asc",
+			Params: q{
+				{"before": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7,
+				},
+			},
+		},
+		// 17
+		{
+			Name: "Simple cursor (after + before): id asc, rangeTruncated:true",
+			Params: q{
+				{"after": cursor.New(2).AddField("id", 2, common.DirectionAsc).Encode()},
+				{"before": cursor.New(2).AddField("id", 6, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(2).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(2).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7, RangeTruncated: true,
+				},
+			},
+		},
+		// 18
+		{
+			Name: "Simple cursor (after + before): id asc, rangeTruncated:false",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 2, common.DirectionAsc).Encode()},
+				{"before": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs: []uint{3, 4},
+				PageInfo: &PageInfo{
+					Next:    cursor.New(pageLimit).AddField("id", 4, common.DirectionAsc).Encode(),
+					Prev:    cursor.New(pageLimit).AddField("id", 3, common.DirectionAsc).SetBackward().Encode(),
+					HasNext: true, HasPrev: true, TotalRows: 7, RangeTruncated: false,
+				},
+			},
+		},
+		// 19
+		{
+			Name: "Simple cursor (after + before): bad order",
+			Params: q{
+				{"after": cursor.New(pageLimit).AddField("id", 5, common.DirectionAsc).Encode()},
+				{"before": cursor.New(pageLimit).AddField("id", 2, common.DirectionAsc).SetBackward().Encode()},
+			},
+			Result: r{
+				IDs:      []uint{},
+				PageInfo: nil,
 			},
 		},
 	}
@@ -536,6 +643,18 @@ func materialsToResultIDs(materials []Material) (IDs []uint) {
 	return IDs
 }
 
+func convertTime(t string) string {
+	//"2020-12-31T23:56:59Z"
+	format := "2006-01-02T15:04:05Z07:00"
+	tParsed, err := time.Parse(format, t)
+	if err != nil {
+		log.Print(err)
+		return t
+	}
+
+	return tParsed.Local().Format(format)
+}
+
 // ------------ Code example
 // main
 func SetupRouter() *gin.Engine {
@@ -745,14 +864,39 @@ func mockDB() (*gorm.DB, sqlmock.Sqlmock) {
 }
 
 func liveDB() *gorm.DB {
-	connString := "host=localhost port=5432 user=postgres dbname=pagination password=123 sslmode=disable"
+	connString := os.Getenv("DB_CONNECT_STRING") //	"host=localhost port=5432 user=postgres dbname=pagination password=123 sslmode=disable"
+	if connString == "" {
+		log.Print("Use DB_CONNECT_STRING env for setup db connection string")
+		os.Exit(1)
+	}
+
 	db, err := gorm.Open(postgres.Open(connString), gormConf)
 	if err != nil {
 		log.Println(err)
 		return nil
 	}
 
-	// db.AutoMigrate(&User{}, &Material{}, &Clap{})
+	type Material struct {
+		ID        uint `gorm:"primary_key"`
+		CreatedAt time.Time
+		UpdatedAt time.Time      `json:"updated_at"`
+		DeletedAt gorm.DeletedAt `gorm:"index"`
+		PublicAt  *time.Time     `json:"PublicTime"`
+
+		Link    string
+		Status  Status
+		Comment string
+
+		ItemID      string `cursor:"item_id_cursor"` // Unical +
+		ItemOwnerID int    // Unical
+		ItemType    string
+
+		UserID        uint
+		Author        User `gorm:"foreignKey:UserID"`
+		AuthorPreload User `gorm:"foreignKey:UserID"`
+		LikesCount    uint
+	}
+	db.AutoMigrate(&User{}, &Material{}, &Clap{})
 
 	sqlDB, _ := db.DB()
 	fixtures, err = testfixtures.New(
