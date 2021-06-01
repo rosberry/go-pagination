@@ -111,7 +111,7 @@ func liveDB() *gorm.DB {
 		return nil
 	}
 
-	// db.AutoMigrate(&User{}, &Material{}, &Clap{})
+	db.AutoMigrate(&User{}, &Material{}, &Clap{})
 
 	sqlDB, _ := db.DB()
 	fixtures, err = testfixtures.New(

@@ -876,7 +876,27 @@ func liveDB() *gorm.DB {
 		return nil
 	}
 
-	// db.AutoMigrate(&User{}, &Material{}, &Clap{})
+	type Material struct {
+		ID        uint `gorm:"primary_key"`
+		CreatedAt time.Time
+		UpdatedAt time.Time      `json:"updated_at"`
+		DeletedAt gorm.DeletedAt `gorm:"index"`
+		PublicAt  *time.Time     `json:"PublicTime"`
+
+		Link    string
+		Status  Status
+		Comment string
+
+		ItemID      string `cursor:"item_id_cursor"` // Unical +
+		ItemOwnerID int    // Unical
+		ItemType    string
+
+		UserID        uint
+		Author        User `gorm:"foreignKey:UserID"`
+		AuthorPreload User `gorm:"foreignKey:UserID"`
+		LikesCount    uint
+	}
+	db.AutoMigrate(&User{}, &Material{}, &Clap{})
 
 	sqlDB, _ := db.DB()
 	fixtures, err = testfixtures.New(
