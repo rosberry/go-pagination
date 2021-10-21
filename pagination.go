@@ -80,6 +80,14 @@ func (p *Paginator) new(o Options) (*Paginator, error) {
 	return p, nil
 }
 
+func (p *Paginator) SetDB(db *gorm.DB) {
+	p.options.DB = db
+}
+
+func (p *Paginator) SetModel(model interface{}) {
+	p.options.Model = model
+}
+
 func (p *Paginator) Find(tx *gorm.DB, dst interface{}) error {
 	if p.options.Model == nil {
 		return common.ErrEmptyModelInPaginator
