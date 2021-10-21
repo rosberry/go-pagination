@@ -220,7 +220,7 @@ func (p *Paginator) count(tx *gorm.DB) (count int64) {
 func (p *Paginator) checkPage(tx *gorm.DB, scope func(*gorm.DB) *gorm.DB) (isExist bool) {
 	var count int64
 
-	if err := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{})).Scopes(scope).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
+	if err := p.options.DB.Table("(?) as t", tx.Session(&gorm.Session{}).Scopes(scope)).Select("count(1)").Limit(1).Count(&count).Error; err != nil {
 		log.Println(err)
 		return
 	}

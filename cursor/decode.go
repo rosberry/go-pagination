@@ -13,27 +13,40 @@ func DecodeAction(sortingQuery, cursorQuery, afterQuery, beforeQuery string, def
 		return nil, nil, common.ErrCursorAndSortingTogether
 	}
 
+	defaultCursorFunc := func() *Cursor {
+		cursor = defaultCursor
+		if cursor == nil {
+			return nil //, nil, common.ErrInvalidDefaultCursor
+		}
+
+		if limit > 0 {
+			cursor.Limit = int(limit)
+		}
+
+		return cursor
+	}
+
 	switch {
 	case cursorQuery != "":
 		// Work with cursor
 		// Decode string to cursor
 		cursor = decodeCursor(cursorQuery, common.CursorBasic)
 		if cursor == nil {
-			return nil, nil, common.ErrInvalidCursor
+			cursor = defaultCursorFunc()
 		}
 	case afterQuery != "" || beforeQuery != "":
 		var afterCursor, beforeCursor *Cursor
 		if afterQuery != "" {
 			afterCursor = decodeCursor(afterQuery, common.CursorAfter)
 			if afterCursor == nil {
-				return nil, nil, common.ErrInvalidCursor
+				cursor = defaultCursorFunc()
 			}
 		}
 
 		if beforeQuery != "" {
 			beforeCursor = decodeCursor(beforeQuery, common.CursorBefore)
 			if beforeCursor == nil {
-				return nil, nil, common.ErrInvalidCursor
+				cursor = defaultCursorFunc()
 			}
 		}
 
@@ -60,14 +73,11 @@ func DecodeAction(sortingQuery, cursorQuery, afterQuery, beforeQuery string, def
 		}
 	default:
 		// Make default cursor
-		cursor = defaultCursor
-		if cursor == nil {
-			return nil, nil, common.ErrInvalidDefaultCursor
-		}
+		cursor = defaultCursorFunc()
+	}
 
-		if limit > 0 {
-			cursor.Limit = int(limit)
-		}
+	if cursor == nil {
+		return nil, nil, common.ErrInvalidCursor
 	}
 
 	return cursor, nil, nil
