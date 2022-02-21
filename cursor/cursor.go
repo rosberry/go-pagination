@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -202,9 +203,19 @@ func searchFieldValue(name string, in interface{}) (value interface{}) {
 
 	return nil
 }
+var (
+	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
+)
+
+func toSnakeCase(str string) string {
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
+}
 
 func findFieldValueByFieldName(name string, model interface{}) (end bool, value interface{}) {
-	name = strings.ToLower(name)
+	name = toSnakeCase(name)
 
 	var (
 		typ reflect.Type
